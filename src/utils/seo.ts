@@ -65,11 +65,14 @@ export function generateArticleSchema(post: {
   imageUrl?: string;
   slug: string;
 }) {
+  const siteUrl = import.meta.env.VITE_SITE_URL || 'https://infoyio.cc';
+  const description = post.content.length > 160 ? post.content.slice(0, 157) + '...' : post.content;
+
   return {
     '@context': 'https://schema.org',
     '@type': 'BlogPosting',
     headline: post.title,
-    description: generateMetaDescription(post.content),
+    description,
     image: post.imageUrl,
     author: {
       '@type': 'Person',
@@ -80,14 +83,14 @@ export function generateArticleSchema(post: {
       name: 'INFOiyo',
       logo: {
         '@type': 'ImageObject',
-        url: 'https://infoyio.com/logo512.png'
+        url: `${siteUrl}/logo512.png`
       }
     },
     datePublished: post.createdAt?.toDate().toISOString(),
     dateModified: post.createdAt?.toDate().toISOString(),
     mainEntityOfPage: {
       '@type': 'WebPage',
-      '@id': `https://infoyio.com/post/${post.slug}`
+      '@id': `${siteUrl}/post/${post.slug}`
     }
   };
 }

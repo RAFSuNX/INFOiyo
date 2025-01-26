@@ -10,7 +10,7 @@ interface SEOProps {
 }
 
 export default function SEO({ title, description, image, article, pathname, keywords }: SEOProps) {
-  const siteUrl = import.meta.env.VITE_SITE_URL || 'https://infoyio.com';
+  const siteUrl = import.meta.env.VITE_SITE_URL || 'https://infoyio.cc';
   const defaultImage = `${siteUrl}/og-image.jpg`;
   const seo = {
     title: title ? `${title} | INFOiyo` : 'INFOiyo | Engage. Focus. Immerse.',

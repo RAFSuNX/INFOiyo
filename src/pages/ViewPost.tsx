@@ -6,6 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import SEO from '../components/SEO';
+import BlogPostSchema from '../components/BlogPostSchema';
 import { AlertCircle } from 'lucide-react';
 
 interface Post {
@@ -197,34 +198,15 @@ export default function ViewPost() {
   return (
     <article className="max-w-4xl mx-auto px-4 overflow-x-hidden">
       <SEO
-        title={post.title}
+        title={`${post.title} | INFOiyo Blog`}
         description={post.excerpt || post.content.slice(0, 160)}
-        keywords={`${post.title}, blog, article, ${post.author}, INFOiyo`}
+        keywords={`${post.title.toLowerCase()}, ${post.author.toLowerCase()}, blog, article, infoyio`}
         image={post.imageUrl}
         article={true}
         pathname={`/post/${slug}`}
       />
       
-      {/* Schema.org Article Markup */}
-      <script type="application/ld+json">
-        {JSON.stringify({
-          '@context': 'https://schema.org',
-          '@type': 'Article',
-          headline: post.title,
-          image: post.imageUrl,
-          author: {
-            '@type': 'Person',
-            name: post.author
-          },
-          datePublished: post.createdAt?.toDate().toISOString(),
-          dateModified: post.createdAt?.toDate().toISOString(),
-          description: post.excerpt || post.content.slice(0, 160),
-          mainEntityOfPage: {
-            '@type': 'WebPage',
-            '@id': window.location.href
-          }
-        })}
-      </script>
+      <BlogPostSchema post={post} />
       
       <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-4 sm:mb-6">{post.title}</h1>
       
