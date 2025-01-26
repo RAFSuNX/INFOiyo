@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { doc, getDoc, collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, where, getDocs } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { db, getCachedData, setCachedData, checkRateLimit } from '../lib/firebase';
 import { useAuth } from '../contexts/AuthContext';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -40,6 +40,21 @@ export default function ViewPost() {
   useEffect(() => {
     const fetchPost = async () => {
       if (!slug) return;
+      
+      // Check cache first
+      const cacheKey = `post-${slug}`;
+      const cachedPost = getCachedData(cacheKey);
+      if (cachedPost) {
+        setPost(cachedPost);
+        setPostId(cachedPost.id);
+        return;
+      }
+
+      // Check rate limit
+      if (!checkRateLimit()) {
+        console.warn('Rate limit exceeded, using cached data if available');
+        return;
+      }
 
       try {
         const postsRef = collection(db, 'posts');
@@ -50,6 +65,9 @@ export default function ViewPost() {
           const postDoc = snapshot.docs[0];
           setPostId(postDoc.id);
           setPost({ id: postDoc.id, ...postDoc.data() } as Post);
+          
+          // Cache the results
+          setCachedData(cacheKey, { id: postDoc.id, ...postDoc.data() });
         } else {
           // Try fetching by ID for backward compatibility with old posts
           const postDoc = await getDoc(doc(db, 'posts', slug));

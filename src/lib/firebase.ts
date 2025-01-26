@@ -17,3 +17,42 @@ export const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const storage = getStorage(app);
+
+// Cache configuration
+export const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes in milliseconds
+export const queryCache = new Map();
+
+// Rate limiting configuration
+export const RATE_LIMIT_DURATION = 60 * 1000; // 1 minute in milliseconds
+export const RATE_LIMIT_REQUESTS = 50; // Maximum requests per minute
+const requestTimestamps: number[] = [];
+
+export function checkRateLimit(): boolean {
+  const now = Date.now();
+  // Remove timestamps older than the rate limit duration
+  while (requestTimestamps.length > 0 && requestTimestamps[0] < now - RATE_LIMIT_DURATION) {
+    requestTimestamps.shift();
+  }
+  
+  if (requestTimestamps.length >= RATE_LIMIT_REQUESTS) {
+    return false;
+  }
+  
+  requestTimestamps.push(now);
+  return true;
+}
+
+export function getCachedData(key: string) {
+  const cached = queryCache.get(key);
+  if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+    return cached.data;
+  }
+  return null;
+}
+
+export function setCachedData(key: string, data: any) {
+  queryCache.set(key, {
+    data,
+    timestamp: Date.now()
+  });
+}

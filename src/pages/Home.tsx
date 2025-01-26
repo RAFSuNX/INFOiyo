@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { collection, getDocs, orderBy, query, where } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { db, getCachedData, setCachedData, checkRateLimit } from '../lib/firebase';
 import { Link } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import { Search } from 'lucide-react';
@@ -26,6 +26,21 @@ export default function Home() {
   const [filteredPosts, setFilteredPosts] = useState<Post[]>([]);
 
   const fetchPosts = useCallback(async () => {
+    // Check cache first
+    const cacheKey = 'home-posts';
+    const cachedPosts = getCachedData(cacheKey);
+    if (cachedPosts) {
+      setPosts(cachedPosts);
+      setFilteredPosts(cachedPosts);
+      return;
+    }
+
+    // Check rate limit
+    if (!checkRateLimit()) {
+      console.warn('Rate limit exceeded, using cached data if available');
+      return;
+    }
+
     const postsRef = collection(db, 'posts');
     const q = query(
       postsRef,
@@ -39,6 +54,9 @@ export default function Home() {
     } as Post));
     setPosts(postsData);
     setFilteredPosts(postsData);
+
+    // Cache the results
+    setCachedData(cacheKey, postsData);
   }, []);
 
   useEffect(() => {

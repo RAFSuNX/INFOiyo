@@ -81,6 +81,12 @@ export default function Profile() {
 
   const validateImageURL = async (url: string): Promise<boolean> => {
     try {
+      // Basic URL validation
+      if (!url.match(/^https?:\/\/.+\/.+\.(jpg|jpeg|png|gif|webp|svg)$/i)) {
+        setError('Please enter a valid image URL ending with .jpg, .jpeg, .png, .gif, .webp, or .svg');
+        return false;
+      }
+
       return new Promise((resolve) => {
         const img = new window.Image();
         img.onload = () => resolve(true);
@@ -109,17 +115,9 @@ export default function Profile() {
         return;
       }
 
-      // Basic URL validation
-      if (!photoURL.match(/^https?:\/\/.+\/.+\.(jpg|jpeg|png|gif|webp)$/i)) {
-        setError('Please enter a valid image URL starting with http:// or https://');
-        setIsPhotoLoading(false);
-        return;
-      }
-
       // Validate that URL points to an image
       const isValidImage = await validateImageURL(photoURL);
       if (!isValidImage) {
-        setError('The URL must point to a valid image file');
         setIsPhotoLoading(false);
         return;
       }
