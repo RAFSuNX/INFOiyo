@@ -19,7 +19,7 @@ export default function Navbar() {
           <div className="flex items-center">
             <Link to="/" className="flex items-center hover:text-gray-600">
               <PenLine className="h-8 w-8" />
-              <span className="ml-2 text-xl font-bold hidden xs:block">INFOiyo</span>
+              <span className="ml-2 text-xl font-bold">INFOiyo</span>
             </Link>
           </div>
 
