@@ -1,0 +1,44 @@
+# Required Firebase Indexes for INFOiyo
+
+## 1. Reports Collection Index
+Collection: `reports`
+Fields:
+- `status` (Ascending)
+- `createdAt` (Descending)
+
+This index supports the pending reports query:
+```javascript
+query(reportsRef, where('status', '==', 'pending'), orderBy('createdAt', 'desc'))
+```
+
+## 2. Chat Collection Index
+Collection: `chat`
+Fields:
+- `createdAt` (Descending)
+
+This index supports the chat messages query:
+```javascript
+query(messagesRef, orderBy('createdAt', 'desc'), limit(50))
+```
+
+## How to Create These Indexes
+
+1. Go to Firebase Console
+2. Select your project
+3. Go to Firestore Database > Indexes tab
+4. Click "Create Index"
+
+### For Reports Index:
+1. Collection ID: `reports`
+2. Add fields:
+   - Field path: `status`, Order: Ascending
+   - Field path: `createdAt`, Order: Descending
+3. Query scope: Collection
+4. Click "Create index"
+
+### For Chat Index:
+1. Collection ID: `chat`
+2. Add field:
+   - Field path: `createdAt`, Order: Descending
+3. Query scope: Collection
+4. Click "Create index"
