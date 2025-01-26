@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { doc, getDoc, collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, where, getDocs } from 'firebase/firestore';
-import { db, getCachedData, setCachedData, checkRateLimit } from '../lib/firebase';
+import { db, getCachedData, setCachedData, checkRateLimit, invalidatePostCache } from '../lib/firebase';
 import { useAuth } from '../contexts/AuthContext';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -106,6 +106,12 @@ export default function ViewPost() {
   const handleSubmitComment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !postId || !newComment.trim()) return;
+    
+    // Rate limit check for comments
+    if (!checkRateLimit()) {
+      alert('Please wait a moment before posting another comment.');
+      return;
+    }
 
     if (!user.emailVerified) {
       alert('Please verify your email before commenting.');
@@ -119,13 +125,23 @@ export default function ViewPost() {
 
     try {
       setSubmitting(true);
+      
+      // Sanitize comment content
+      const sanitizedComment = newComment.trim()
+        .replace(/[<>]/g, '') // Remove potential HTML tags
+        .slice(0, 1000); // Limit comment length
+      
       const commentsRef = collection(db, 'posts', postId, 'comments');
       await addDoc(commentsRef, {
-        content: newComment.trim(),
+        content: sanitizedComment,
         author: user.displayName,
         authorId: user.uid,
         createdAt: serverTimestamp()
       });
+      
+      // Invalidate post cache after new comment
+      invalidatePostCache();
+      
       setNewComment('');
     } catch (error) {
       console.error('Error adding comment:', error);
@@ -216,7 +232,7 @@ export default function ViewPost() {
   return (
     <article className="max-w-4xl mx-auto px-4 overflow-x-hidden">
       <SEO
-        title={`${post.title} | INFOiyo Blog`}
+        title={post.title}
         description={post.excerpt || post.content.slice(0, 160)}
         keywords={`${post.title.toLowerCase()}, ${post.author.toLowerCase()}, blog, article, infoyio`}
         image={post.imageUrl}
@@ -243,7 +259,25 @@ export default function ViewPost() {
       )}
 
       <div className="prose prose-sm sm:prose-base lg:prose-lg max-w-none mb-8 sm:mb-12 overflow-x-auto">
-        <ReactMarkdown remarkPlugins={[remarkGfm]}>{post.content}</ReactMarkdown>
+        <ReactMarkdown 
+          remarkPlugins={[remarkGfm]}
+          components={{
+            img: ({node, ...props}) => (
+              <img 
+                {...props} 
+                loading="lazy"
+                className="rounded-lg max-w-full h-auto"
+                onError={(e) => {
+                  const target = e.currentTarget;
+                  target.onerror = null;
+                  target.src = '/placeholder-image.jpg';
+                }}
+              />
+            )
+          }}
+        >
+          {post.content}
+        </ReactMarkdown>
       </div>
 
       <div className="mt-12 border-t border-black pt-8">

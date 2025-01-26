@@ -5,6 +5,18 @@ interface BlogPostSchemaProps {
   post: {
     title: string;
     content: string;
+    excerpt?: string;
+    author: string;
+    createdAt: any;
+    imageUrl?: string;
+    slug: string;
+  };
+}
+
+interface BlogPostSchemaProps {
+  post: {
+    title: string;
+    content: string;
     author: string;
     createdAt: any;
     imageUrl?: string;
@@ -24,13 +36,13 @@ export default function BlogPostSchema({ post }: BlogPostSchemaProps) {
   return (
     <Helmet>
       {/* Basic Meta Tags */}
-      <title>{post.title} | INFOiyo</title>
-      <meta name="description" content={post.content.slice(0, 160)} />
+      <title>{`${post.title} | INFOiyo`}</title>
+      <meta name="description" content={post.excerpt || post.content.slice(0, 160)} />
       <link rel="canonical" href={`${siteUrl}/post/${post.slug}`} />
       
       {/* OpenGraph Meta Tags */}
       <meta property="og:title" content={post.title} />
-      <meta property="og:description" content={post.content.slice(0, 160)} />
+      <meta property="og:description" content={post.excerpt || post.content.slice(0, 160)} />
       <meta property="og:type" content="article" />
       <meta property="og:url" content={`${siteUrl}/post/${post.slug}`} />
       {post.imageUrl && <meta property="og:image" content={post.imageUrl} />}
@@ -40,7 +52,7 @@ export default function BlogPostSchema({ post }: BlogPostSchemaProps) {
       {/* Twitter Meta Tags */}
       <meta name="twitter:card" content="summary_large_image" />
       <meta name="twitter:title" content={post.title} />
-      <meta name="twitter:description" content={post.content.slice(0, 160)} />
+      <meta name="twitter:description" content={post.excerpt || post.content.slice(0, 160)} />
       {post.imageUrl && <meta name="twitter:image" content={post.imageUrl} />}
       
       {/* Schema.org Structured Data */}

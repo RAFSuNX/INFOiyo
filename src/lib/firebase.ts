@@ -19,14 +19,27 @@ export const db = getFirestore(app);
 export const storage = getStorage(app);
 
 // Cache configuration
-export const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes in milliseconds
+export const CACHE_DURATION = 15 * 60 * 1000; // 15 minutes in milliseconds
 export const queryCache = new Map();
 
 // Rate limiting configuration
-export const RATE_LIMIT_DURATION = 60 * 1000; // 1 minute in milliseconds
-export const RATE_LIMIT_REQUESTS = 50; // Maximum requests per minute
+export const RATE_LIMIT_DURATION = 5 * 60 * 1000; // 5 minutes in milliseconds
+export const RATE_LIMIT_REQUESTS = 100; // Maximum requests per 5 minutes
 const requestTimestamps: number[] = [];
 
+// Cache invalidation for specific keys
+export function invalidateCache(key: string) {
+  queryCache.delete(key);
+}
+
+// Cache invalidation for post-related keys
+export function invalidatePostCache() {
+  for (const key of queryCache.keys()) {
+    if (key.startsWith('post-') || key === 'home-posts') {
+      queryCache.delete(key);
+    }
+  }
+}
 export function checkRateLimit(): boolean {
   const now = Date.now();
   // Remove timestamps older than the rate limit duration

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { collection, getDocs, orderBy, query, where } from 'firebase/firestore';
-import { db, getCachedData, setCachedData, checkRateLimit } from '../lib/firebase';
+import { collection, getDocs, orderBy, query, where, limit } from 'firebase/firestore';
+import { db, getCachedData, setCachedData, checkRateLimit, invalidatePostCache } from '../lib/firebase';
 import { Link } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import { Search } from 'lucide-react';
@@ -24,13 +24,17 @@ export default function Home() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredPosts, setFilteredPosts] = useState<Post[]>([]);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const postsPerPage = 10;
 
   const fetchPosts = useCallback(async () => {
-    // Check cache first
-    const cacheKey = 'home-posts';
+    // Generate cache key based on page
+    const cacheKey = `home-posts-${page}`;
+    
     const cachedPosts = getCachedData(cacheKey);
     if (cachedPosts) {
-      setPosts(cachedPosts);
+      setPosts(prev => [...prev, ...cachedPosts]);
       setFilteredPosts(cachedPosts);
       return;
     }
@@ -45,19 +49,28 @@ export default function Home() {
     const q = query(
       postsRef,
       where('status', '==', 'approved'),
-      orderBy('createdAt', 'desc')
+      orderBy('createdAt', 'desc'),
+      limit(postsPerPage)
     );
     const snapshot = await getDocs(q);
     const postsData = snapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
     } as Post));
-    setPosts(postsData);
+    
+    setPosts(prev => [...prev, ...postsData]);
     setFilteredPosts(postsData);
+    setHasMore(postsData.length === postsPerPage);
 
     // Cache the results
     setCachedData(cacheKey, postsData);
-  }, []);
+  }, [page]);
+
+  const loadMore = () => {
+    if (hasMore) {
+      setPage(prev => prev + 1);
+    }
+  };
 
   useEffect(() => {
     const init = async () => {
@@ -104,13 +117,14 @@ export default function Home() {
       </div>
 
       <div className="space-y-10">
-        {filteredPosts.map(post => (
-          <article key={post.id} className="border border-black border-[1px] p-4 sm:p-6 rounded-lg">
+        {filteredPosts.map((post) => (
+          <article key={`${post.id}-${post.slug}`} className="border border-black border-[1px] p-4 sm:p-6 rounded-lg">
             {post.imageUrl && (
               <img
                 src={post.imageUrl}
                 alt={post.title}
                 className="w-full h-48 sm:h-64 object-cover rounded-lg mb-4 sm:mb-6"
+                loading="lazy"
               />
             )}
             <Link to={`/post/${post.slug}`}>
