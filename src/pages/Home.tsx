@@ -93,7 +93,7 @@ export default function Home() {
   return (
     <div>
       <SEO
-        title="Blog"
+        title="Home"
         description="Discover insightful articles and join meaningful discussions on INFOiyo."
         keywords="blog, articles, community, discussions, knowledge sharing"
       />
