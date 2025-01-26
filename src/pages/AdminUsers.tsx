@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react';
 import { collection, query, getDocs, doc, updateDoc, where, orderBy } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useAuth } from '../contexts/AuthContext';
-import { UserProfile } from '../types/user';
-import { Shield, UserX, UserCheck, Flag } from 'lucide-react';
+import { UserProfile, UserRole } from '../types/user';
+import { Shield, UserX, UserCheck, Flag, Search, ChevronDown } from 'lucide-react';
 
 interface Report {
   id: string;
@@ -19,11 +19,16 @@ interface Report {
   createdAt: any;
 }
 
+const AVAILABLE_ROLES: UserRole[] = ['user', 'writer', 'admin'];
+
 export default function AdminUsers() {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [reports, setReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'users' | 'reports'>('users');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filteredUsers, setFilteredUsers] = useState<UserProfile[]>([]);
+  const [updatingRole, setUpdatingRole] = useState<string | null>(null);
   const { userProfile } = useAuth();
 
   useEffect(() => {
@@ -48,12 +53,22 @@ export default function AdminUsers() {
       } as Report));
 
       setUsers(usersData);
+      setFilteredUsers(usersData);
       setReports(reportsData);
       setLoading(false);
     };
 
     fetchData();
   }, []);
+
+  useEffect(() => {
+    const results = users.filter(user =>
+      user.displayName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.role.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+    setFilteredUsers(results);
+  }, [searchTerm, users]);
 
   const handleToggleUserStatus = async (uid: string, currentStatus: string) => {
     const newStatus = currentStatus === 'active' ? 'banned' : 'active';
@@ -63,6 +78,36 @@ export default function AdminUsers() {
     setUsers(users.map(user => 
       user.uid === uid ? { ...user, status: newStatus } : user
     ));
+    setFilteredUsers(filteredUsers.map(user => 
+      user.uid === uid ? { ...user, status: newStatus } : user
+    ));
+  };
+
+  const handleUpdateRole = async (uid: string, newRole: UserRole) => {
+    if (!AVAILABLE_ROLES.includes(newRole)) {
+      console.error('Invalid role selected');
+      return;
+    }
+
+    try {
+      const userRef = doc(db, 'users', uid);
+      await updateDoc(userRef, {
+        role: newRole
+      });
+
+      const updatedUsers = users.map(user => 
+        user.uid === uid ? { ...user, role: newRole } : user
+      );
+      setUsers(updatedUsers);
+      setFilteredUsers(updatedUsers.filter(user =>
+        user.displayName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.role.toLowerCase().includes(searchTerm.toLowerCase())
+      ));
+      setUpdatingRole(null);
+    } catch (error) {
+      console.error('Error updating role:', error);
+    }
   };
 
   const handleResolveReport = async (reportId: string, reportedUserId: string) => {
@@ -118,6 +163,26 @@ export default function AdminUsers() {
         </button>
       </div>
 
+      {activeTab === 'users' && (
+        <div className="mb-6">
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="Search users by name, email, or role..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full px-4 py-3 pl-12 border border-black rounded-lg focus:ring-2 focus:ring-black focus:outline-none"
+            />
+            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500 h-5 w-5" />
+          </div>
+          {searchTerm && (
+            <p className="mt-2 text-sm text-gray-600">
+              Found {filteredUsers.length} {filteredUsers.length === 1 ? 'user' : 'users'}
+            </p>
+          )}
+        </div>
+      )}
+
       {activeTab === 'users' ? (
         <div className="bg-white border border-black rounded-lg overflow-hidden">
           <div className="overflow-x-auto">
@@ -142,7 +207,7 @@ export default function AdminUsers() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {users.map((user) => (
+                {filteredUsers.map((user) => (
                   <tr key={user.uid}>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
@@ -158,9 +223,29 @@ export default function AdminUsers() {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
-                        {user.role}
-                      </span>
+                      {updatingRole === user.uid ? (
+                        <div className="relative">
+                          <select
+                            defaultValue={user.role}
+                            onChange={(e) => handleUpdateRole(user.uid, e.target.value as UserRole)}
+                            className="appearance-none w-32 px-3 py-1 border border-black rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+                          >
+                            {AVAILABLE_ROLES.map((role) => (
+                              <option key={role} value={role}>
+                                {role}
+                              </option>
+                            ))}
+                          </select>
+                          <ChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none" />
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => setUpdatingRole(user.uid)}
+                          className="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800 hover:bg-gray-200"
+                        >
+                          {user.role}
+                        </button>
+                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
@@ -200,6 +285,13 @@ export default function AdminUsers() {
                 ))}
               </tbody>
             </table>
+
+            {filteredUsers.length === 0 && searchTerm && (
+              <div className="text-center py-12">
+                <p className="text-xl font-semibold mb-2">No users found</p>
+                <p className="text-gray-600">Try adjusting your search terms</p>
+              </div>
+            )}
           </div>
         </div>
       ) : (
