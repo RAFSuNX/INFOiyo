@@ -1,28 +1,58 @@
 import { useState, useEffect } from 'react';
-import { collection, query, getDocs, doc, updateDoc } from 'firebase/firestore';
+import { collection, query, getDocs, doc, updateDoc, where, orderBy } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { UserProfile } from '../types/user';
-import { Shield, UserX, UserCheck } from 'lucide-react';
+import { Shield, UserX, UserCheck, Flag } from 'lucide-react';
+
+interface Report {
+  id: string;
+  messageId: string;
+  messageContent: string;
+  reportedUserId: string;
+  reportedUserName: string;
+  reportedUserEmail: string;
+  reporterUserId: string;
+  reporterUserName: string;
+  reason: string;
+  status: 'pending' | 'resolved';
+  createdAt: any;
+}
 
 export default function AdminUsers() {
   const [users, setUsers] = useState<UserProfile[]>([]);
+  const [reports, setReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'users' | 'reports'>('users');
   const { userProfile } = useAuth();
 
   useEffect(() => {
-    const fetchUsers = async () => {
+    const fetchData = async () => {
       const usersRef = collection(db, 'users');
-      const snapshot = await getDocs(query(usersRef));
-      const usersData = snapshot.docs.map(doc => ({
+      const reportsRef = collection(db, 'reports');
+      const reportsQuery = query(reportsRef, where('status', '==', 'pending'), orderBy('createdAt', 'desc'));
+
+      const [usersSnapshot, reportsSnapshot] = await Promise.all([
+        getDocs(query(usersRef)),
+        getDocs(reportsQuery)
+      ]);
+
+      const usersData = usersSnapshot.docs.map(doc => ({
         ...doc.data(),
         uid: doc.id,
       } as UserProfile));
+
+      const reportsData = reportsSnapshot.docs.map(doc => ({
+        ...doc.data(),
+        id: doc.id,
+      } as Report));
+
       setUsers(usersData);
+      setReports(reportsData);
       setLoading(false);
     };
 
-    fetchUsers();
+    fetchData();
   }, []);
 
   const handleToggleUserStatus = async (uid: string, currentStatus: string) => {
@@ -33,6 +63,19 @@ export default function AdminUsers() {
     setUsers(users.map(user => 
       user.uid === uid ? { ...user, status: newStatus } : user
     ));
+  };
+
+  const handleResolveReport = async (reportId: string, reportedUserId: string) => {
+    await updateDoc(doc(db, 'reports', reportId), {
+      status: 'resolved'
+    });
+    setReports(reports.filter(report => report.id !== reportId));
+  };
+
+  const formatDate = (timestamp: any) => {
+    if (!timestamp) return 'N/A';
+    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+    return date.toLocaleDateString();
   };
 
   if (!userProfile || userProfile.role !== 'admin') {
@@ -52,92 +95,167 @@ export default function AdminUsers() {
     <div className="max-w-7xl mx-auto px-4 py-8">
       <div className="flex items-center gap-3 mb-8">
         <Shield className="h-8 w-8" />
-        <h1 className="text-3xl font-bold">User Management</h1>
+        <h1 className="text-3xl font-bold">Admin Dashboard</h1>
       </div>
 
-      <div className="bg-white border border-black rounded-lg overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  User
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Role
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Joined
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {users.map((user) => (
-                <tr key={user.uid}>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <div className="flex-shrink-0 h-10 w-10 bg-black text-white rounded-full flex items-center justify-center">
-                        {user.displayName[0].toUpperCase()}
-                      </div>
-                      <div className="ml-4">
-                        <div className="text-sm font-medium text-gray-900">
-                          {user.displayName}
-                        </div>
-                        <div className="text-sm text-gray-500">{user.email}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
-                      {user.role}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                      user.status === 'active' 
-                        ? 'bg-green-100 text-green-800' 
-                        : 'bg-red-100 text-red-800'
-                    }`}>
-                      {user.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {new Date(user.createdAt).toLocaleDateString()}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <button
-                      onClick={() => handleToggleUserStatus(user.uid, user.status)}
-                      className={`inline-flex items-center px-3 py-2 border rounded-md text-sm font-medium ${
-                        user.status === 'active'
-                          ? 'border-red-300 text-red-700 hover:bg-red-50'
-                          : 'border-green-300 text-green-700 hover:bg-green-50'
-                      }`}
-                    >
-                      {user.status === 'active' ? (
-                        <>
-                          <UserX className="h-4 w-4 mr-2" />
-                          Ban User
-                        </>
-                      ) : (
-                        <>
-                          <UserCheck className="h-4 w-4 mr-2" />
-                          Unban User
-                        </>
-                      )}
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+      <div className="flex gap-4 mb-6">
+        <button
+          onClick={() => setActiveTab('users')}
+          className={`px-4 py-2 rounded-lg ${
+            activeTab === 'users' ? 'bg-black text-white' : 'border border-black'
+          }`}
+        >
+          Users
+        </button>
+        <button
+          onClick={() => setActiveTab('reports')}
+          className={`px-4 py-2 rounded-lg flex items-center gap-2 ${
+            activeTab === 'reports' ? 'bg-black text-white' : 'border border-black'
+          }`}
+        >
+          <Flag className="h-4 w-4" />
+          Reports {reports.length > 0 && `(${reports.length})`}
+        </button>
       </div>
+
+      {activeTab === 'users' ? (
+        <div className="bg-white border border-black rounded-lg overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    User
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Role
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Joined
+                  </th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {users.map((user) => (
+                  <tr key={user.uid}>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <div className="flex-shrink-0 h-10 w-10 bg-black text-white rounded-full flex items-center justify-center">
+                          {user.displayName[0].toUpperCase()}
+                        </div>
+                        <div className="ml-4">
+                          <div className="text-sm font-medium text-gray-900">
+                            {user.displayName}
+                          </div>
+                          <div className="text-sm text-gray-500">{user.email}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
+                        {user.role}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                        user.status === 'active' 
+                          ? 'bg-green-100 text-green-800' 
+                          : 'bg-red-100 text-red-800'
+                      }`}>
+                        {user.status}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {formatDate(user.createdAt)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <button
+                        onClick={() => handleToggleUserStatus(user.uid, user.status)}
+                        className={`inline-flex items-center px-3 py-2 border rounded-md text-sm font-medium ${
+                          user.status === 'active'
+                            ? 'border-red-300 text-red-700 hover:bg-red-50'
+                            : 'border-green-300 text-green-700 hover:bg-green-50'
+                        }`}
+                      >
+                        {user.status === 'active' ? (
+                          <>
+                            <UserX className="h-4 w-4 mr-2" />
+                            Ban User
+                          </>
+                        ) : (
+                          <>
+                            <UserCheck className="h-4 w-4 mr-2" />
+                            Unban User
+                          </>
+                        )}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : (
+        <div className="bg-white border border-black rounded-lg overflow-hidden">
+          {reports.length === 0 ? (
+            <div className="text-center py-12">
+              <Flag className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+              <h3 className="text-lg font-medium text-gray-900">No pending reports</h3>
+              <p className="text-gray-500">All reports have been resolved</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-gray-200">
+              {reports.map((report) => (
+                <div key={report.id} className="p-6">
+                  <div className="flex justify-between items-start mb-4">
+                    <div>
+                      <h3 className="text-lg font-medium">Report against {report.reportedUserName}</h3>
+                      <p className="text-sm text-gray-500">Reported by {report.reporterUserName}</p>
+                    </div>
+                    <span className="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                      {report.status}
+                    </span>
+                  </div>
+                  <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                    <p className="text-sm text-gray-600 mb-2">Reported Message:</p>
+                    <p className="font-medium">{report.messageContent}</p>
+                  </div>
+                  <div className="mb-4">
+                    <p className="text-sm text-gray-600 mb-2">Reason for Report:</p>
+                    <p>{report.reason}</p>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <p className="text-sm text-gray-500">
+                      Reported on {formatDate(report.createdAt)}
+                    </p>
+                    <div className="flex gap-4">
+                      <button
+                        onClick={() => handleToggleUserStatus(report.reportedUserId, 'active')}
+                        className="px-4 py-2 border border-red-300 text-red-700 rounded-lg hover:bg-red-50"
+                      >
+                        Ban User
+                      </button>
+                      <button
+                        onClick={() => handleResolveReport(report.id, report.reportedUserId)}
+                        className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800"
+                      >
+                        Resolve Report
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import { useAuth } from '../contexts/AuthContext';
 import { Link } from 'react-router-dom';
-import { Menu, X, PenLine, UserCircle, Shield } from 'lucide-react';
+import { Menu, X, PenLine, UserCircle, Shield, MessageCircle } from 'lucide-react';
 import { useState } from 'react';
 
 export default function Navbar() {
@@ -24,6 +24,10 @@ export default function Navbar() {
           {/* Desktop menu */}
           <div className="hidden sm:flex sm:items-center sm:space-x-8">
             <Link to="/" className="hover:text-gray-600">Home</Link>
+            <Link to="/chat" className="flex items-center hover:text-gray-600">
+              <MessageCircle className="h-5 w-5 mr-1" />
+              <span>Chat</span>
+            </Link>
             {canCreatePost && (
               <Link to="/create-post" className="hover:text-gray-600">Create Post</Link>
             )}
@@ -63,6 +67,7 @@ export default function Navbar() {
         <div className="sm:hidden">
           <div className="px-2 pt-2 pb-3 space-y-1">
             <Link to="/" className="block px-3 py-2 hover:bg-gray-100">Home</Link>
+            <Link to="/chat" className="block px-3 py-2 hover:bg-gray-100">Chat</Link>
             {canCreatePost && (
               <Link to="/create-post" className="block px-3 py-2 hover:bg-gray-100">Create Post</Link>
             )}

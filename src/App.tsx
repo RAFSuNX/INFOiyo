@@ -10,6 +10,7 @@ import Profile from './pages/Profile';
 import EditPost from './pages/EditPost';
 import MarkdownGuide from './pages/MarkdownGuide';
 import AdminUsers from './pages/AdminUsers';
+import Chat from './pages/Chat';
 
 function App() {
   return (
@@ -28,6 +29,7 @@ function App() {
               <Route path="/profile" element={<Profile />} />
               <Route path="/markdown-guide" element={<MarkdownGuide />} />
               <Route path="/admin/users" element={<AdminUsers />} />
+              <Route path="/chat" element={<Chat />} />
             </Routes>
           </main>
         </div>
