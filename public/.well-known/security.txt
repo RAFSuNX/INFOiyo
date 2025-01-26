@@ -1,0 +1,6 @@
+# Security Policy
+Contact: mailto:security@infoyio.com
+Expires: 2025-12-31T23:59:59.000Z
+Encryption: https://infoyio.com/pgp-key.txt
+Preferred-Languages: en
+Canonical: https://infoyio.com/.well-known/security.txt

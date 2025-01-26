@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useAuth } from '../contexts/AuthContext';
 import ReactMarkdown from 'react-markdown';
@@ -13,21 +13,25 @@ export default function EditPost() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showPreview, setShowPreview] = useState(false);
-  const { id } = useParams();
+  const { slug } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
 
   useEffect(() => {
     const fetchPost = async () => {
-      if (!id || !user) return;
+      if (!slug || !user) return;
 
       try {
-        const postDoc = await getDoc(doc(db, 'posts', id));
-        if (!postDoc.exists()) {
+        const postsRef = collection(db, 'posts');
+        const q = query(postsRef, where('slug', '==', slug));
+        const snapshot = await getDocs(q);
+        
+        if (snapshot.empty) {
           navigate('/profile');
           return;
         }
 
+        const postDoc = snapshot.docs[0];
         const postData = postDoc.data();
         if (postData.authorId !== user.uid) {
           navigate('/profile');
@@ -44,19 +48,27 @@ export default function EditPost() {
     };
 
     fetchPost();
-  }, [id, user, navigate]);
+  }, [slug, user, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!id || !user) return;
+    if (!slug || !user) return;
 
     try {
       setLoading(true);
-      await updateDoc(doc(db, 'posts', id), {
+      const postsRef = collection(db, 'posts');
+      const q = query(postsRef, where('slug', '==', slug));
+      const snapshot = await getDocs(q);
+      
+      if (snapshot.empty) {
+        throw new Error('Post not found');
+      }
+      
+      await updateDoc(doc(db, 'posts', snapshot.docs[0].id), {
         title,
         content,
       });
-      navigate(`/post/${id}`);
+      navigate(`/post/${slug}`);
     } catch (err) {
       setError('Failed to update post');
       setLoading(false);

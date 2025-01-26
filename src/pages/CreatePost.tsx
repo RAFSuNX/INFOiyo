@@ -1,16 +1,19 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, query, where, getDocs } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '../lib/firebase';
 import { useAuth } from '../contexts/AuthContext';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { Info, Book } from 'lucide-react';
+import { Info, Book, AlertCircle } from 'lucide-react';
+import { slugify } from '../utils/slugify';
+import { PostStatus } from '../types/user';
 
 export default function CreatePost() {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
+  const [excerpt, setExcerpt] = useState('');
   const [image, setImage] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [error, setError] = useState('');
@@ -39,9 +42,20 @@ export default function CreatePost() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
+    setLoading(true);
+    
+    // Generate slug and check for uniqueness
+    let slug = slugify(title);
+    const postsRef = collection(db, 'posts');
+    const slugQuery = query(postsRef, where('slug', '==', slug));
+    const slugSnapshot = await getDocs(slugQuery);
+    
+    // If slug exists, append a timestamp
+    if (!slugSnapshot.empty) {
+      slug = `${slug}-${Date.now()}`;
+    }
 
     try {
-      setLoading(true);
       let imageUrl = '';
 
       if (image) {
@@ -53,28 +67,36 @@ export default function CreatePost() {
       const post = {
         title,
         content,
+        slug,
+        excerpt,
         imageUrl,
         author: user.displayName,
         authorId: user.uid,
+        status: userProfile.role === 'admin' ? 'approved' as PostStatus : 'pending' as PostStatus,
         createdAt: serverTimestamp()
       };
 
       await addDoc(collection(db, 'posts'), post);
-      navigate('/');
+      setLoading(false);
+      navigate('/profile');
+      
+      if (userProfile.role !== 'admin') {
+        alert('Your post has been submitted for review. An admin will approve it shortly.');
+      }
     } catch (err) {
+      console.error('Error creating post:', err);
       setError('Failed to create post');
-    } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4">
-      <h1 className="text-3xl font-bold mb-8">Create New Post</h1>
+    <div className="max-w-7xl mx-auto px-4 overflow-x-hidden">
+      <h1 className="text-2xl sm:text-3xl font-bold mb-6 sm:mb-8">Create New Post</h1>
       
       {error && <p className="text-red-600 mb-4">{error}</p>}
       
-      <div className="flex flex-col md:flex-row gap-8">
+      <div className="flex flex-col lg:flex-row gap-6 sm:gap-8">
         <form onSubmit={handleSubmit} className="flex-1 space-y-6">
           <div>
             <label className="block text-sm font-medium mb-2">Title</label>
@@ -86,6 +108,26 @@ export default function CreatePost() {
               className="w-full border border-black rounded-lg p-3 focus:ring-2 focus:ring-black focus:outline-none"
               placeholder="Enter your post title"
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              Excerpt (for SEO)
+              <span className="text-gray-500 text-xs ml-2">
+                Brief description of your post (max 160 characters)
+              </span>
+            </label>
+            <textarea
+              value={excerpt}
+              onChange={(e) => setExcerpt(e.target.value)}
+              maxLength={160}
+              rows={2}
+              className="w-full border border-black rounded-lg p-3 focus:ring-2 focus:ring-black focus:outline-none"
+              placeholder="Enter a brief description of your post..."
+            />
+            <p className="text-sm text-gray-500 mt-1">
+              {excerpt.length}/160 characters
+            </p>
           </div>
 
           <div>
@@ -111,12 +153,12 @@ export default function CreatePost() {
                 required
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
-                rows={15}
+                rows={12}
                 className="w-full border border-black rounded-lg p-4 font-mono focus:ring-2 focus:ring-black focus:outline-none"
                 placeholder="Write your post content here..."
               />
             ) : (
-              <div className="border border-black rounded-lg p-4 min-h-[400px] prose prose-sm md:prose-base lg:prose-lg max-w-none">
+              <div className="border border-black rounded-lg p-4 min-h-[300px] sm:min-h-[400px] prose prose-sm sm:prose-base lg:prose-lg max-w-none overflow-x-auto">
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>{content || 'Nothing to preview'}</ReactMarkdown>
               </div>
             )}

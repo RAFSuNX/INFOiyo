@@ -1,15 +1,18 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { doc, getDoc, collection, addDoc, query, orderBy, onSnapshot, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, where, getDocs } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useAuth } from '../contexts/AuthContext';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import SEO from '../components/SEO';
 import { AlertCircle } from 'lucide-react';
 
 interface Post {
+  id: string;
   title: string;
   content: string;
+  excerpt?: string;
   imageUrl?: string;
   author: string;
   createdAt: any;
@@ -29,17 +32,30 @@ export default function ViewPost() {
   const [newComment, setNewComment] = useState('');
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const { id } = useParams();
+  const { slug } = useParams();
+  const [postId, setPostId] = useState<string | null>(null);
   const { user, userProfile } = useAuth();
 
   useEffect(() => {
     const fetchPost = async () => {
-      if (!id) return;
-      
+      if (!slug) return;
+
       try {
-        const postDoc = await getDoc(doc(db, 'posts', id));
-        if (postDoc.exists()) {
+        const postsRef = collection(db, 'posts');
+        const q = query(postsRef, where('slug', '==', slug));
+        const snapshot = await getDocs(q);
+
+        if (!snapshot.empty) {
+          const postDoc = snapshot.docs[0];
+          setPostId(postDoc.id);
           setPost({ id: postDoc.id, ...postDoc.data() } as Post);
+        } else {
+          // Try fetching by ID for backward compatibility with old posts
+          const postDoc = await getDoc(doc(db, 'posts', slug));
+          if (postDoc.exists()) {
+            setPostId(postDoc.id);
+            setPost({ id: postDoc.id, ...postDoc.data() } as Post);
+          }
         }
       } catch (error) {
         console.error('Error fetching post:', error);
@@ -49,9 +65,11 @@ export default function ViewPost() {
     };
 
     fetchPost();
+  }, [slug]);
 
-    if (id) {
-      const commentsRef = collection(db, 'posts', id, 'comments');
+  useEffect(() => {
+    if (postId) {
+      const commentsRef = collection(db, 'posts', postId, 'comments');
       const q = query(commentsRef, orderBy('createdAt', 'desc'));
       
       const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -64,11 +82,11 @@ export default function ViewPost() {
 
       return () => unsubscribe();
     }
-  }, [id]);
+  }, [postId]);
 
   const handleSubmitComment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !id || !newComment.trim()) return;
+    if (!user || !postId || !newComment.trim()) return;
 
     if (!user.emailVerified) {
       alert('Please verify your email before commenting.');
@@ -82,7 +100,7 @@ export default function ViewPost() {
 
     try {
       setSubmitting(true);
-      const commentsRef = collection(db, 'posts', id, 'comments');
+      const commentsRef = collection(db, 'posts', postId, 'comments');
       await addDoc(commentsRef, {
         content: newComment.trim(),
         author: user.displayName,
@@ -177,8 +195,38 @@ export default function ViewPost() {
   };
 
   return (
-    <article className="max-w-4xl mx-auto px-4">
-      <h1 className="text-4xl font-bold mb-6">{post.title}</h1>
+    <article className="max-w-4xl mx-auto px-4 overflow-x-hidden">
+      <SEO
+        title={post.title}
+        description={post.excerpt || post.content.slice(0, 160)}
+        keywords={`${post.title}, blog, article, ${post.author}, INFOiyo`}
+        image={post.imageUrl}
+        article={true}
+        pathname={`/post/${slug}`}
+      />
+      
+      {/* Schema.org Article Markup */}
+      <script type="application/ld+json">
+        {JSON.stringify({
+          '@context': 'https://schema.org',
+          '@type': 'Article',
+          headline: post.title,
+          image: post.imageUrl,
+          author: {
+            '@type': 'Person',
+            name: post.author
+          },
+          datePublished: post.createdAt?.toDate().toISOString(),
+          dateModified: post.createdAt?.toDate().toISOString(),
+          description: post.excerpt || post.content.slice(0, 160),
+          mainEntityOfPage: {
+            '@type': 'WebPage',
+            '@id': window.location.href
+          }
+        })}
+      </script>
+      
+      <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-4 sm:mb-6">{post.title}</h1>
       
       <div className="mb-6 text-sm text-gray-600">
         <span>By {post.author}</span>
@@ -190,11 +238,11 @@ export default function ViewPost() {
         <img
           src={post.imageUrl}
           alt={post.title}
-          className="w-full h-96 object-cover rounded-lg mb-8"
+          className="w-full h-48 sm:h-64 md:h-96 object-cover rounded-lg mb-6 sm:mb-8"
         />
       )}
 
-      <div className="prose prose-sm md:prose-base lg:prose-lg max-w-none mb-12">
+      <div className="prose prose-sm sm:prose-base lg:prose-lg max-w-none mb-8 sm:mb-12 overflow-x-auto">
         <ReactMarkdown remarkPlugins={[remarkGfm]}>{post.content}</ReactMarkdown>
       </div>
 

@@ -1,0 +1,172 @@
+{
+  /* Site Information
+   * Basic information about your website that's used across the application
+   */
+  "site": {
+    // The name of your website
+    "name": "INFOiyo",
+    
+    // Your site's tagline/slogan
+    "tagline": "Engage. Focus. Immerse.",
+    
+    // Your website's URL (update this when deploying)
+    "url": "https://infoyio.com",
+    
+    // Main description of your website (used in meta tags)
+    "description": "A platform for engaging discussions and insightful content. Join our community to share knowledge and explore ideas.",
+    
+    // Keywords for SEO (comma-separated)
+    "keywords": "blog, community, discussions, knowledge sharing, articles",
+    
+    // Website author/organization name
+    "author": "INFOiyo",
+    
+    // Theme color for browser UI (mobile browsers, PWA)
+    "themeColor": "#000000",
+    
+    // Default locale for internationalization
+    "locale": "en_US"
+  },
+
+  /* SEO Configuration
+   * Settings for search engine optimization and social sharing
+   */
+  "seo": {
+    // Default social sharing image (absolute path from public directory)
+    "defaultImage": "/og-image.jpg",
+    
+    // Twitter card type (summary_large_image shows larger image previews)
+    "twitterCard": "summary_large_image",
+    
+    // Robots meta tag content (controls how search engines handle your content)
+    "robotsContent": "max-snippet:-1, max-image-preview:large, max-video-preview:-1"
+  },
+
+  /* Web App Manifest
+   * Configuration for Progressive Web App (PWA) features
+   */
+  "manifest": {
+    // Short name for app icons
+    "shortName": "INFOiyo",
+    
+    // How the app should be displayed when launched from home screen
+    "display": "standalone",
+    
+    // Theme color for PWA
+    "themeColor": "#000000",
+    
+    // Background color for splash screen
+    "backgroundColor": "#ffffff",
+    
+    // App icons configuration
+    "icons": [
+      {
+        "src": "favicon.ico",
+        "sizes": "64x64 32x32 24x24 16x16",
+        "type": "image/x-icon"
+      },
+      {
+        "src": "logo192.png",
+        "type": "image/png",
+        "sizes": "192x192"
+      },
+      {
+        "src": "logo512.png",
+        "type": "image/png",
+        "sizes": "512x512"
+      }
+    ]
+  },
+
+  /* Sitemap Configuration
+   * Define your website's structure for search engines
+   */
+  "sitemap": {
+    "pages": [
+      {
+        // Homepage
+        "path": "/",
+        "changefreq": "daily", // How often the page content changes
+        "priority": 1.0       // Relative importance (0.0 to 1.0)
+      },
+      {
+        // Markdown guide page
+        "path": "/markdown-guide",
+        "changefreq": "monthly",
+        "priority": 0.8
+      },
+      {
+        // Authentication pages
+        "path": "/signin",
+        "changefreq": "monthly",
+        "priority": 0.7
+      },
+      {
+        "path": "/signup",
+        "changefreq": "monthly",
+        "priority": 0.7
+      }
+    ]
+  },
+
+  /* Firebase Configuration
+   * Database structure and rules
+   */
+  "firebase": {
+    "collections": {
+      // Posts collection configuration
+      "posts": {
+        "indexes": [
+          {
+            // Ensure unique slugs for posts
+            "fields": ["slug"],
+            "unique": true
+          },
+          {
+            // Sort posts by creation date
+            "fields": ["createdAt"],
+            "order": "desc"
+          }
+        ]
+      },
+
+      // Users collection configuration
+      "users": {
+        // Default role for new users
+        "defaultRole": "user",
+        
+        // Default account status
+        "defaultStatus": "active",
+        
+        // Available user roles (in order of increasing privileges)
+        "availableRoles": ["user", "writer", "admin"]
+      },
+
+      // Chat collection configuration
+      "chat": {
+        "indexes": [
+          {
+            // Sort messages by creation date
+            "fields": ["createdAt"],
+            "order": "desc"
+          }
+        ],
+        // Maximum number of messages to load
+        "messageLimit": 50
+      },
+
+      // Reports collection configuration
+      "reports": {
+        "indexes": [
+          {
+            // Sort reports by status and date
+            "fields": ["status", "createdAt"],
+            "order": ["asc", "desc"]
+          }
+        ],
+        // Available report statuses
+        "statuses": ["pending", "resolved"]
+      }
+    }
+  }
+}

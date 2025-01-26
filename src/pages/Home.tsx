@@ -1,14 +1,20 @@
-import { useState, useEffect } from 'react';
-import { collection, getDocs, orderBy, query } from 'firebase/firestore';
+import { useState, useEffect, useCallback } from 'react';
+import { collection, getDocs, orderBy, query, where } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { Link } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import { Search } from 'lucide-react';
+import { PostStatus } from '../types/user';
+import SEO from '../components/SEO';
+import { updateOldPosts } from '../utils/updateOldPosts';
 
 interface Post {
   id: string;
   title: string;
   content: string;
+  slug: string;
+  status: PostStatus;
+  excerpt?: string;
   imageUrl?: string;
   author: string;
   createdAt: any;
@@ -19,21 +25,30 @@ export default function Home() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredPosts, setFilteredPosts] = useState<Post[]>([]);
 
-  useEffect(() => {
-    const fetchPosts = async () => {
-      const postsRef = collection(db, 'posts');
-      const q = query(postsRef, orderBy('createdAt', 'desc'));
-      const snapshot = await getDocs(q);
-      const postsData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      } as Post));
-      setPosts(postsData);
-      setFilteredPosts(postsData);
-    };
-
-    fetchPosts();
+  const fetchPosts = useCallback(async () => {
+    const postsRef = collection(db, 'posts');
+    const q = query(
+      postsRef,
+      where('status', '==', 'approved'),
+      orderBy('createdAt', 'desc')
+    );
+    const snapshot = await getDocs(q);
+    const postsData = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    } as Post));
+    setPosts(postsData);
+    setFilteredPosts(postsData);
   }, []);
+
+  useEffect(() => {
+    const init = async () => {
+      await updateOldPosts();
+      await fetchPosts();
+    };
+    init();
+  }, [fetchPosts]);
+
 
   useEffect(() => {
     const results = posts.filter(post =>
@@ -46,6 +61,12 @@ export default function Home() {
 
   return (
     <div>
+      <SEO
+        title="Blog"
+        description="Discover insightful articles and join meaningful discussions on INFOiyo."
+        keywords="blog, articles, community, discussions, knowledge sharing"
+      />
+      
       <div className="mb-8">
         <div className="relative">
           <input
@@ -66,26 +87,26 @@ export default function Home() {
 
       <div className="space-y-10">
         {filteredPosts.map(post => (
-          <article key={post.id} className="border border-black border-[1px] p-6 rounded-lg">
+          <article key={post.id} className="border border-black border-[1px] p-4 sm:p-6 rounded-lg">
             {post.imageUrl && (
               <img
                 src={post.imageUrl}
                 alt={post.title}
-                className="w-full h-64 object-cover rounded-lg mb-6"
+                className="w-full h-48 sm:h-64 object-cover rounded-lg mb-4 sm:mb-6"
               />
             )}
-            <Link to={`/post/${post.id}`}>
-              <h2 className="text-2xl font-bold mb-4 hover:text-gray-600">{post.title}</h2>
+            <Link to={`/post/${post.slug}`}>
+              <h2 className="text-xl sm:text-2xl font-bold mb-2 sm:mb-4 hover:text-gray-600">{post.title}</h2>
             </Link>
             <div className="prose max-w-none line-clamp-3">
-              <ReactMarkdown>{post.content}</ReactMarkdown>
+              <p>{post.excerpt || post.content.slice(0, 160)}</p>
             </div>
-            <div className="mt-4 flex justify-between items-center text-sm text-gray-600">
+            <div className="mt-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-0 text-sm text-gray-600">
               <span>By {post.author}</span>
               <span>{post.createdAt?.toDate().toLocaleDateString()}</span>
             </div>
             <Link
-              to={`/post/${post.id}`}
+              to={`/post/${post.slug}`}
               className="mt-4 inline-block text-sm hover:text-gray-600"
             >
               Read more →

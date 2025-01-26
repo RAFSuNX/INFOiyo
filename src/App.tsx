@@ -16,16 +16,16 @@ function App() {
   return (
     <Router>
       <AuthProvider>
-        <div className="min-h-screen bg-white">
+        <div className="min-h-screen bg-white overflow-x-hidden">
           <Navbar />
-          <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
             <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/signin" element={<SignIn />} />
               <Route path="/signup" element={<SignUp />} />
               <Route path="/create-post" element={<CreatePost />} />
-              <Route path="/post/:id" element={<ViewPost />} />
-              <Route path="/post/:id/edit" element={<EditPost />} />
+              <Route path="/post/:slug" element={<ViewPost />} />
+              <Route path="/post/:slug/edit" element={<EditPost />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/markdown-guide" element={<MarkdownGuide />} />
               <Route path="/admin/users" element={<AdminUsers />} />

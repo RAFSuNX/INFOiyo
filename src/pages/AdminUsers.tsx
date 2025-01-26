@@ -2,8 +2,10 @@ import { useState, useEffect } from 'react';
 import { collection, query, getDocs, doc, updateDoc, where, orderBy } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useAuth } from '../contexts/AuthContext';
-import { UserProfile, UserRole } from '../types/user';
-import { Shield, UserX, UserCheck, Flag, Search, ChevronDown } from 'lucide-react';
+import { UserProfile, UserRole, PostStatus } from '../types/user';
+import { Shield, UserX, UserCheck, Flag, Search, ChevronDown, PenLine } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 interface Report {
   id: string;
@@ -21,11 +23,22 @@ interface Report {
 
 const AVAILABLE_ROLES: UserRole[] = ['user', 'writer', 'admin'];
 
+interface PendingPost {
+  id: string;
+  title: string;
+  content: string;
+  author: string;
+  authorId: string;
+  createdAt: any;
+  status: PostStatus;
+}
+
 export default function AdminUsers() {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [reports, setReports] = useState<Report[]>([]);
+  const [pendingPosts, setPendingPosts] = useState<PendingPost[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'users' | 'reports'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'reports' | 'posts'>('users');
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredUsers, setFilteredUsers] = useState<UserProfile[]>([]);
   const [updatingRole, setUpdatingRole] = useState<string | null>(null);
@@ -35,11 +48,14 @@ export default function AdminUsers() {
     const fetchData = async () => {
       const usersRef = collection(db, 'users');
       const reportsRef = collection(db, 'reports');
+      const postsRef = collection(db, 'posts');
       const reportsQuery = query(reportsRef, where('status', '==', 'pending'), orderBy('createdAt', 'desc'));
+      const postsQuery = query(postsRef, where('status', '==', 'pending'), orderBy('createdAt', 'desc'));
 
-      const [usersSnapshot, reportsSnapshot] = await Promise.all([
+      const [usersSnapshot, reportsSnapshot, postsSnapshot] = await Promise.all([
         getDocs(query(usersRef)),
-        getDocs(reportsQuery)
+        getDocs(reportsQuery),
+        getDocs(postsQuery)
       ]);
 
       const usersData = usersSnapshot.docs.map(doc => ({
@@ -52,9 +68,15 @@ export default function AdminUsers() {
         id: doc.id,
       } as Report));
 
+      const postsData = postsSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      } as PendingPost));
+
       setUsers(usersData);
       setFilteredUsers(usersData);
       setReports(reportsData);
+      setPendingPosts(postsData);
       setLoading(false);
     };
 
@@ -117,6 +139,17 @@ export default function AdminUsers() {
     setReports(reports.filter(report => report.id !== reportId));
   };
 
+  const handlePostAction = async (postId: string, action: 'approved' | 'rejected') => {
+    try {
+      await updateDoc(doc(db, 'posts', postId), {
+        status: action
+      });
+      setPendingPosts(pendingPosts.filter(post => post.id !== postId));
+    } catch (error) {
+      console.error('Error updating post status:', error);
+    }
+  };
+
   const formatDate = (timestamp: any) => {
     if (!timestamp) return 'N/A';
     const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
@@ -160,6 +193,15 @@ export default function AdminUsers() {
         >
           <Flag className="h-4 w-4" />
           Reports {reports.length > 0 && `(${reports.length})`}
+        </button>
+        <button
+          onClick={() => setActiveTab('posts')}
+          className={`px-4 py-2 rounded-lg flex items-center gap-2 ${
+            activeTab === 'posts' ? 'bg-black text-white' : 'border border-black'
+          }`}
+        >
+          <PenLine className="h-4 w-4" />
+          Pending Posts {pendingPosts.length > 0 && `(${pendingPosts.length})`}
         </button>
       </div>
 
@@ -294,7 +336,7 @@ export default function AdminUsers() {
             )}
           </div>
         </div>
-      ) : (
+      ) : activeTab === 'reports' ? (
         <div className="bg-white border border-black rounded-lg overflow-hidden">
           {reports.length === 0 ? (
             <div className="text-center py-12">
@@ -339,6 +381,61 @@ export default function AdminUsers() {
                         className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800"
                       >
                         Resolve Report
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="bg-white border border-black rounded-lg overflow-hidden">
+          {pendingPosts.length === 0 ? (
+            <div className="text-center py-12">
+              <PenLine className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+              <h3 className="text-lg font-medium text-gray-900">No pending posts</h3>
+              <p className="text-gray-500">All posts have been reviewed</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-gray-200">
+              {pendingPosts.map((post) => (
+                <div key={post.id} className="p-6">
+                  <div className="flex justify-between items-start mb-4">
+                    <div>
+                      <h3 className="text-lg font-medium">{post.title}</h3>
+                      <p className="text-sm text-gray-500">By {post.author}</p>
+                    </div>
+                    <span className="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                      {post.status}
+                    </span>
+                  </div>
+                  <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                    <p className="text-sm text-gray-600 mb-2">Post Content:</p>
+                    <div className="prose prose-sm">
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                        {post.content.length > 300 
+                          ? post.content.slice(0, 300) + '...' 
+                          : post.content}
+                      </ReactMarkdown>
+                    </div>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <p className="text-sm text-gray-500">
+                      Submitted on {formatDate(post.createdAt)}
+                    </p>
+                    <div className="flex gap-4">
+                      <button
+                        onClick={() => handlePostAction(post.id, 'rejected')}
+                        className="px-4 py-2 border border-red-300 text-red-700 rounded-lg hover:bg-red-50"
+                      >
+                        Reject
+                      </button>
+                      <button
+                        onClick={() => handlePostAction(post.id, 'approved')}
+                        className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800"
+                      >
+                        Approve
                       </button>
                     </div>
                   </div>

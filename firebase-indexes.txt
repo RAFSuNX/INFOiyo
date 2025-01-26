@@ -1,6 +1,39 @@
 # Required Firebase Indexes for INFOiyo
 
-## 1. Reports Collection Index
+## 1. Posts Collection
+Collection: `posts`
+Fields:
+- `status` (Ascending)
+- `createdAt` (Descending)
+
+This index supports the following queries:
+```javascript
+query(postsRef, where('status', '==', 'pending'), orderBy('createdAt', 'desc'))
+query(postsRef, where('status', '==', 'approved'), orderBy('createdAt', 'desc'))
+```
+
+## 2. Author Posts Index
+Collection: `posts`
+Fields:
+- `authorId` (Ascending)
+- `createdAt` (Descending)
+
+This index supports the author's posts query:
+```javascript
+query(postsRef, where('authorId', '==', user.uid), orderBy('createdAt', 'desc'))
+```
+
+## 3. Chat Collection Index
+Collection: `chat`
+Fields:
+- `createdAt` (Descending)
+
+This index supports the chat messages query:
+```javascript
+query(messagesRef, orderBy('createdAt', 'desc'), limit(50))
+```
+
+## 4. Reports Collection Index
 Collection: `reports`
 Fields:
 - `status` (Ascending)
@@ -11,15 +44,12 @@ This index supports the pending reports query:
 query(reportsRef, where('status', '==', 'pending'), orderBy('createdAt', 'desc'))
 ```
 
-## 2. Chat Collection Index
-Collection: `chat`
-Fields:
-- `createdAt` (Descending)
+## 5. Unique Indexes
+Collection: `posts`
+Field: `slug` (Ascending)
+Unique: Yes
 
-This index supports the chat messages query:
-```javascript
-query(messagesRef, orderBy('createdAt', 'desc'), limit(50))
-```
+This ensures unique slugs for blog posts.
 
 ## How to Create These Indexes
 
@@ -28,10 +58,18 @@ query(messagesRef, orderBy('createdAt', 'desc'), limit(50))
 3. Go to Firestore Database > Indexes tab
 4. Click "Create Index"
 
-### For Reports Index:
-1. Collection ID: `reports`
+### For Posts Status Index:
+1. Collection ID: `posts`
 2. Add fields:
    - Field path: `status`, Order: Ascending
+   - Field path: `createdAt`, Order: Descending
+3. Query scope: Collection
+4. Click "Create index"
+
+### For Author Posts Index:
+1. Collection ID: `posts`
+2. Add fields:
+   - Field path: `authorId`, Order: Ascending
    - Field path: `createdAt`, Order: Descending
 3. Query scope: Collection
 4. Click "Create index"
@@ -42,3 +80,19 @@ query(messagesRef, orderBy('createdAt', 'desc'), limit(50))
    - Field path: `createdAt`, Order: Descending
 3. Query scope: Collection
 4. Click "Create index"
+
+### For Reports Index:
+1. Collection ID: `reports`
+2. Add fields:
+   - Field path: `status`, Order: Ascending
+   - Field path: `createdAt`, Order: Descending
+3. Query scope: Collection
+4. Click "Create index"
+
+### For Unique Slug Index:
+1. Collection ID: `posts`
+2. Add field:
+   - Field path: `slug`
+3. Query scope: Collection
+4. Check "Unique"
+5. Click "Create index"

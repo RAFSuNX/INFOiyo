@@ -1,0 +1,169 @@
+{
+  /* General Site Settings
+   * Basic configuration that needs to be updated frequently
+   */
+  "site": {
+    // Company/organization social media links
+    "social": {
+      "twitter": "https://twitter.com/infoyio",
+      "facebook": "https://facebook.com/infoyio",
+      "linkedin": "https://linkedin.com/company/infoyio"
+    },
+
+    // Contact information
+    "contact": {
+      "email": {
+        "general": "team@infoyio.com",
+        "security": "security@infoyio.com"
+      },
+      "location": "Global"
+    }
+  },
+
+  /* Content Settings
+   * Configuration for content-related features
+   */
+  "content": {
+    // Maximum lengths for various content types
+    "limits": {
+      "postExcerpt": 160,      // Maximum characters for post excerpts
+      "postTitle": 100,        // Maximum characters for post titles
+      "commentLength": 1000,   // Maximum characters for comments
+      "chatMessage": 500      // Maximum characters for chat messages
+    },
+
+    // File upload restrictions
+    "uploads": {
+      "maxImageSize": 5,      // Maximum image size in MB
+      "allowedImageTypes": [   // Allowed image file types
+        "image/jpeg",
+        "image/png",
+        "image/webp"
+      ]
+    }
+  },
+
+  /* User Management
+   * Settings for user roles and permissions
+   */
+  "users": {
+    // Available user roles and their capabilities
+    "roles": {
+      "user": {
+        "canComment": true,
+        "canChat": true,
+        "canCreatePosts": false
+      },
+      "writer": {
+        "canComment": true,
+        "canChat": true,
+        "canCreatePosts": true
+      },
+      "admin": {
+        "canComment": true,
+        "canChat": true,
+        "canCreatePosts": true,
+        "canManageUsers": true,
+        "canManageContent": true
+      }
+    },
+
+    // Account verification settings
+    "verification": {
+      "requireEmailVerification": true,
+      "verificationEmailTemplate": {
+        "subject": "Verify your INFOiyo account",
+        "fromName": "INFOiyo Team"
+      }
+    }
+  },
+
+  /* UI/UX Configuration
+   * Settings for user interface elements
+   */
+  "ui": {
+    // Pagination settings
+    "pagination": {
+      "postsPerPage": 10,
+      "commentsPerPage": 20,
+      "chatMessagesInitial": 50
+    },
+
+    // Date format settings
+    "dateFormat": {
+      "posts": "MMMM DD, YYYY",
+      "comments": "MM/DD/YYYY",
+      "chat": "HH:mm MM/DD/YYYY"
+    },
+
+    // Text snippets that appear throughout the application
+    "messages": {
+      "welcomeMessage": "Welcome to INFOiyo - Engage. Focus. Immerse.",
+      "errorMessages": {
+        "unauthorized": "You don't have permission to perform this action",
+        "notFound": "The requested resource was not found",
+        "serverError": "Something went wrong. Please try again later"
+      },
+      "successMessages": {
+        "postCreated": "Post created successfully",
+        "commentAdded": "Comment added successfully",
+        "profileUpdated": "Profile updated successfully"
+      }
+    }
+  },
+
+  /* Security Settings
+   * Configuration for security-related features
+   */
+  "security": {
+    // Password requirements
+    "passwordPolicy": {
+      "minLength": 8,
+      "requireUppercase": true,
+      "requireNumbers": true,
+      "requireSpecialChars": true
+    },
+
+    // Rate limiting settings
+    "rateLimits": {
+      "loginAttempts": {
+        "maxAttempts": 5,
+        "windowMinutes": 15
+      },
+      "postCreation": {
+        "maxPosts": 10,
+        "windowHours": 24
+      },
+      "commenting": {
+        "maxComments": 50,
+        "windowHours": 24
+      }
+    },
+
+    // Content moderation
+    "moderation": {
+      "enableAutoModeration": true,
+      "flaggedWords": [
+        "spam",
+        "offensive"
+      ],
+      "autoModActions": {
+        "warnThreshold": 3,
+        "tempBanThreshold": 5,
+        "permBanThreshold": 10
+      }
+    }
+  },
+
+  /* Feature Flags
+   * Toggle various features on/off
+   */
+  "features": {
+    "enableChat": true,
+    "enableComments": true,
+    "enableUserProfiles": true,
+    "enableMarkdownSupport": true,
+    "enableImageUploads": true,
+    "enableEmailNotifications": true
+  }
+}
