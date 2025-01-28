@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, limit, doc, getDoc } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, limit, doc, getDoc, getDocs, where } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { AlertCircle, Send, MessageCircle, Flag, ArrowLeft } from 'lucide-react';
@@ -13,6 +13,7 @@ interface ChatMessage {
   content: string;
   author: string;
   authorId: string;
+  authorPhotoURL?: string;
   createdAt: any;
 }
 
@@ -83,6 +84,7 @@ function ReportModal({ message, onClose, onSubmit }: ReportModalProps) {
 
 export default function Chat() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [userPhotos, setUserPhotos] = useState<Record<string, string | null>>({});
   const [newMessage, setNewMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [reportedMessage, setReportedMessage] = useState<ChatMessage | null>(null);
@@ -96,14 +98,19 @@ export default function Chat() {
     if (!user?.emailVerified) return;
 
     const messagesRef = collection(db, 'chat');
-    const q = query(messagesRef, orderBy('createdAt', 'desc'), limit(100));
-    
+    const q = query(messagesRef, orderBy('createdAt', 'asc'), limit(100));
+
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const messagesData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      } as ChatMessage));
-      setMessages(messagesData.reverse());
+      const messagesData = snapshot.docs.map(doc => {
+        const messageData = doc.data();
+        return {
+          id: doc.id,
+          ...messageData
+        } as ChatMessage;
+      });
+      
+      setMessages(messagesData);
+      
       if (shouldScrollToBottom) {
         scrollToBottom();
       }
@@ -111,6 +118,34 @@ export default function Chat() {
 
     return () => unsubscribe();
   }, [user?.emailVerified, shouldScrollToBottom]);
+
+  // Fetch user profile photos separately
+  useEffect(() => {
+    const fetchUserPhotos = async () => {
+      const newUserIds = messages
+        .filter(message => !userPhotos[message.authorId])
+        .map(message => message.authorId);
+      
+      if (newUserIds.length === 0) return;
+      
+      const newPhotos = await Promise.all(
+        newUserIds.map(async (userId) => {
+          const userDoc = await getDoc(doc(db, 'users', userId));
+          const userData = userDoc.data();
+          return [userId, userData?.photoURL || null] as [string, string | null];
+        })
+      );
+      
+      setUserPhotos(prev => ({
+        ...prev,
+        ...Object.fromEntries(newPhotos)
+      }));
+    };
+
+    if (messages.length > 0) {
+      fetchUserPhotos();
+    }
+  }, [messages]);
 
   useEffect(() => {
     if (shouldScrollToBottom) {
@@ -241,8 +276,24 @@ export default function Chat() {
               } rounded-2xl px-4 py-2 shadow-sm break-words`}>
                 <p className="whitespace-pre-wrap break-words text-base">{message.content}</p>
                 <div className="flex items-center gap-2 mt-1">
-                  <div className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-medium
-                    ${message.authorId === user.uid ? 'bg-white text-black' : 'bg-black text-white'}`}>
+                  {userPhotos[message.authorId] ? (
+                    <img
+                      src={userPhotos[message.authorId]!}
+                      alt={message.author}
+                      className={`w-4 h-4 rounded-full object-cover`}
+                      loading="lazy"
+                      onError={(e) => {
+                        const target = e.currentTarget;
+                        target.onerror = null;
+                        // Fallback to initial letter if image fails to load
+                        target.style.display = 'none';
+                        target.nextElementSibling?.classList.remove('hidden');
+                      }}
+                    />
+                  ) : null}
+                  <div className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-medium ${
+                    userPhotos[message.authorId] ? 'hidden' : ''
+                  } ${message.authorId === user.uid ? 'bg-white text-black' : 'bg-black text-white'}`}>
                     {message.author[0].toUpperCase()}
                   </div>
                   <div className={`text-[10px] ${message.authorId === user.uid ? 'text-gray-300' : 'text-gray-500'}`}>
