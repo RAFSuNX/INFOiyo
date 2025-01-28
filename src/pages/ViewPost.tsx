@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
-import { doc, getDoc, collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, where, getDocs } from 'firebase/firestore';
+import { useParams, useNavigate } from 'react-router-dom';
+import { doc, getDoc, collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, where, getDocs, deleteDoc } from 'firebase/firestore';
 import { db, getCachedData, setCachedData, checkRateLimit, invalidatePostCache } from '../lib/firebase';
 import { useAuth } from '../contexts/AuthContext';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import SEO from '../components/SEO';
 import BlogPostSchema from '../components/BlogPostSchema';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, Trash2 } from 'lucide-react';
+import BackButton from '../components/BackButton';
 
 interface Post {
   id: string;
@@ -34,7 +35,9 @@ export default function ViewPost() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const { slug } = useParams();
+  const navigate = useNavigate();
   const [postId, setPostId] = useState<string | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const { user, userProfile } = useAuth();
 
   useEffect(() => {
@@ -150,6 +153,18 @@ export default function ViewPost() {
     }
   };
 
+  const handleDeletePost = async () => {
+    if (!postId) return;
+    
+    try {
+      await deleteDoc(doc(db, 'posts', postId));
+      invalidatePostCache();
+      navigate('/');
+    } catch (error) {
+      console.error('Error deleting post:', error);
+    }
+  };
+
   if (loading) {
     return <div className="text-center py-12">Loading...</div>;
   }
@@ -230,7 +245,7 @@ export default function ViewPost() {
   };
 
   return (
-    <article className="max-w-4xl mx-auto px-4 overflow-x-hidden">
+    <article className="max-w-4xl mx-auto px-4 overflow-x-hidden animate-fade-in">
       <SEO
         title={post.title}
         description={post.excerpt || post.content.slice(0, 160)}
@@ -242,13 +257,56 @@ export default function ViewPost() {
       
       <BlogPostSchema post={post} />
       
-      <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-4 sm:mb-6">{post.title}</h1>
-      
-      <div className="mb-6 text-sm text-gray-600">
-        <span>By {post.author}</span>
-        <span className="mx-2">•</span>
-        <span>{post.createdAt?.toDate().toLocaleDateString()}</span>
+      <div className="mb-6">
+        <BackButton />
       </div>
+      
+      <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-4 sm:mb-6">{post.title}</h1>
+
+      <div className="flex justify-between items-center mb-6">
+        <div className="text-sm text-gray-600">
+          <span>By {post.author}</span>
+          <span className="mx-2">•</span>
+          <span>{post.createdAt?.toDate().toLocaleDateString()}</span>
+        </div>
+        {userProfile?.role === 'admin' && (
+          <div>
+            <button
+              onClick={() => setShowDeleteConfirm(true)}
+              className="inline-flex items-center px-3 py-2 border border-red-300 text-red-700 rounded-lg hover:bg-red-50"
+              title="Delete post"
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete Post
+            </button>
+          </div>
+        )}
+      </div>
+
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full">
+            <h3 className="text-lg font-semibold mb-4">Delete Post</h3>
+            <p className="text-gray-600 mb-6">
+              Are you sure you want to delete this post? This action cannot be undone.
+            </p>
+            <div className="flex justify-end gap-4">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                className="px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeletePost}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {post.imageUrl && (
         <img
@@ -292,7 +350,10 @@ export default function ViewPost() {
             </div>
           ) : (
             comments.map(comment => (
-              <div key={comment.id} className="bg-gray-50 rounded-lg p-6">
+              <div 
+                key={comment.id} 
+                className="bg-gray-50 rounded-lg p-6 animate-scale-in"
+              >
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center">
                     <div className="h-10 w-10 rounded-full bg-black text-white flex items-center justify-center font-medium">

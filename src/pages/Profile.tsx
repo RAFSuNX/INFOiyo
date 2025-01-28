@@ -137,7 +137,7 @@ export default function Profile() {
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8 space-y-8">
-      <div className="bg-white border border-black rounded-lg p-8">
+      <div className="bg-white border border-black rounded-lg p-8 animate-fade-in">
         <div className="flex items-center space-x-4 mb-8">
           <div className="relative group">
             {userProfile.photoURL ? (
@@ -278,7 +278,7 @@ export default function Profile() {
       </div>
 
       {userProfile.role === 'admin' && (
-        <div className="bg-white border border-black rounded-lg p-8">
+        <div className="bg-white border border-black rounded-lg p-8 animate-fade-in">
           <div className="flex items-center gap-3 mb-6">
             <Shield className="h-6 w-6" />
             <h2 className="text-2xl font-bold">Admin Tools</h2>
@@ -301,16 +301,27 @@ export default function Profile() {
         </div>
       )}
 
-      <div className="bg-white border border-black rounded-lg p-8">
+      <div className="bg-white border border-black rounded-lg p-8 animate-fade-in">
         <h2 className="text-2xl font-bold mb-6">Your Posts</h2>
         {loading ? (
           <p className="text-center py-4">Loading your posts...</p>
         ) : posts.length === 0 ? (
-          <div className="text-center py-8 bg-gray-50 rounded-lg">
+          <div className="text-center py-8 bg-gray-50 rounded-lg animate-scale-in">
             <AlertCircle className="mx-auto h-12 w-12 text-gray-400 mb-3" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">No posts yet</h3>
-            <p className="text-gray-600 mb-4">Start sharing your thoughts with the community.</p>
-            {(userProfile.role === 'admin' || userProfile.role === 'writer') && (
+            <p className="text-gray-600 mb-4">
+              {userProfile.role === 'user' 
+                ? 'Want to share your thoughts with the community?' 
+                : 'Start sharing your thoughts with the community.'}
+            </p>
+            {userProfile.role === 'user' ? (
+              <Link
+                to="/apply-writer"
+                className="inline-flex items-center px-6 py-3 bg-black text-white rounded-lg hover:bg-gray-800 transition-all duration-200"
+              >
+                Apply to Become a Writer
+              </Link>
+            ) : (userProfile.role === 'admin' || userProfile.role === 'writer') && (
               <Link
                 to="/create-post"
                 className="inline-flex items-center px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition duration-200"
@@ -322,7 +333,7 @@ export default function Profile() {
         ) : (
           <div className="space-y-4">
             {posts.map((post) => (
-              <div key={post.id} className="border border-gray-200 rounded-lg p-6">
+              <div key={post.id} className="border border-gray-200 rounded-lg p-6 animate-fade-in hover:shadow-lg transition-all duration-200">
                 <div className="flex justify-between items-start mb-4">
                   <div>
                     <div className="flex items-center gap-2">
@@ -368,13 +379,13 @@ export default function Profile() {
                     <div className="flex space-x-2">
                       <button
                         onClick={() => handleDeletePost(post.id)}
-                        className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                        className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-200"
                       >
                         Confirm Delete
                       </button>
                       <button
                         onClick={() => setDeleteConfirm(null)}
-                        className="px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50"
+                        className="px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors duration-200"
                       >
                         Cancel
                       </button>

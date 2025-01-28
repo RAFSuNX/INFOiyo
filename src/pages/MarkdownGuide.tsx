@@ -2,6 +2,7 @@ import { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Book, Layout, Type, ListOrdered, Link as LinkIcon, Image, Code, Table } from 'lucide-react';
+import BackButton from '../components/BackButton';
 
 export default function MarkdownGuide() {
   const [selectedExample, setSelectedExample] = useState<string | null>(null);
@@ -104,6 +105,10 @@ function greet(name) {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
+      <div className="mb-6">
+        <BackButton />
+      </div>
+      
       <div className="flex items-center gap-3 mb-8">
         <Book className="h-8 w-8" />
         <h1 className="text-3xl font-bold">Markdown Writing Guide</h1>

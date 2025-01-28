@@ -1,22 +1,24 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { collection, addDoc, serverTimestamp, query, where, getDocs } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { db, storage } from '../lib/firebase';
+import { db } from '../lib/firebase';
 import { useAuth } from '../contexts/AuthContext';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Info, Book, AlertCircle } from 'lucide-react';
 import { slugify } from '../utils/slugify';
 import { PostStatus } from '../types/user';
+import { useErrorHandler } from '../hooks/useErrorHandler';
+import { handleApiError } from '../utils/errorHandler';
+import ErrorAlert from '../components/ErrorAlert';
+import BackButton from '../components/BackButton';
 
 export default function CreatePost() {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [excerpt, setExcerpt] = useState('');
-  const [image, setImage] = useState<File | null>(null);
-  const [preview, setPreview] = useState<string | null>(null);
-  const [error, setError] = useState('');
+  const [imageUrl, setImageUrl] = useState('');
+  const { error, handleError, clearError } = useErrorHandler();
   const [loading, setLoading] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const navigate = useNavigate();
@@ -25,43 +27,63 @@ export default function CreatePost() {
   if (!userProfile || (userProfile.role !== 'admin' && userProfile.role !== 'writer')) {
     return (
       <div className="text-center py-12">
-        <h2 className="text-2xl font-bold">Unauthorized Access</h2>
-        <p className="mt-2">You don't have permission to create posts.</p>
+        <h2 className="text-2xl font-bold mb-4">Want to become a writer?</h2>
+        <p className="text-gray-600 mb-6">
+          Apply to become a writer and share your thoughts with our community.
+        </p>
+        <Link
+          to="/apply-writer"
+          className="inline-flex items-center px-6 py-3 bg-black text-white rounded-lg hover:bg-gray-800 transition-all duration-200"
+        >
+          Apply Now
+        </Link>
       </div>
     );
   }
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      setImage(file);
-      setPreview(URL.createObjectURL(file));
+  const validateImageUrl = (url: string): boolean => {
+    if (!url) return true; // Empty URL is valid
+    const pattern = /^https?:\/\/.+\/.+\.(jpg|jpeg|png|gif|webp)$/i;
+    if (url && !pattern.test(url)) {
+      handleError('Please enter a valid image URL ending with .jpg, .jpeg, .png, .gif, or .webp');
+      return false;
     }
+    return true;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
     setLoading(true);
-    
-    // Generate slug and check for uniqueness
-    let slug = slugify(title);
-    const postsRef = collection(db, 'posts');
-    const slugQuery = query(postsRef, where('slug', '==', slug));
-    const slugSnapshot = await getDocs(slugQuery);
-    
-    // If slug exists, append a timestamp
-    if (!slugSnapshot.empty) {
-      slug = `${slug}-${Date.now()}`;
-    }
+    clearError();
 
     try {
-      let imageUrl = '';
+      if (!title.trim()) {
+        throw new Error('Title is required');
+      }
+      if (!content.trim()) {
+        throw new Error('Content is required');
+      }
+      if (title.length > 100) {
+        throw new Error('Title must be less than 100 characters');
+      }
+      if (excerpt.length > 160) {
+        throw new Error('Excerpt must be less than 160 characters');
+      }
+    
+      // Generate slug and check for uniqueness
+      let slug = slugify(title);
+      const postsRef = collection(db, 'posts');
+      const slugQuery = query(postsRef, where('slug', '==', slug));
+      const slugSnapshot = await getDocs(slugQuery);
+    
+      // If slug exists, append a timestamp
+      if (!slugSnapshot.empty) {
+        slug = `${slug}-${Date.now()}`;
+      }
 
-      if (image) {
-        const imageRef = ref(storage, `blog-images/${Date.now()}-${image.name}`);
-        const uploadResult = await uploadBytes(imageRef, image);
-        imageUrl = await getDownloadURL(uploadResult.ref);
+      if (!validateImageUrl(imageUrl)) {
+        return;
       }
 
       const post = {
@@ -84,14 +106,17 @@ export default function CreatePost() {
         alert('Your post has been submitted for review. An admin will approve it shortly.');
       }
     } catch (err) {
-      console.error('Error creating post:', err);
-      setError('Failed to create post');
+      handleError(handleApiError(err));
       setLoading(false);
     }
   };
 
   return (
     <div className="max-w-7xl mx-auto px-4 overflow-x-hidden">
+      <div className="mb-6">
+        <BackButton />
+      </div>
+      
       <h1 className="text-2xl sm:text-3xl font-bold mb-6 sm:mb-8">Create New Post</h1>
       
       {error && <p className="text-red-600 mb-4">{error}</p>}
@@ -165,15 +190,44 @@ export default function CreatePost() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2">Featured Image</label>
+            <label className="block text-sm font-medium mb-2">
+              Featured Image URL
+              <span className="text-gray-500 text-xs ml-2">
+                Enter a direct image URL (optional)
+              </span>
+            </label>
             <input
-              type="file"
-              accept="image/*"
-              onChange={handleImageChange}
-              className="w-full"
+              type="url"
+              value={imageUrl}
+              onChange={(e) => {
+                setError('');
+                setImageUrl(e.target.value);
+              }}
+              placeholder="https://example.com/image.jpg"
+              className="w-full border border-black rounded-lg p-3 focus:ring-2 focus:ring-black focus:outline-none"
             />
-            {preview && (
-              <img src={preview} alt="Preview" className="mt-4 max-h-64 object-contain rounded-lg" />
+            <p className="text-sm text-gray-500 mt-1">
+              We recommend using <a href="https://postimages.org/" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">postimages.org</a> to host your image. After uploading, copy the "Direct link" URL.
+            </p>
+            <p className="text-sm text-gray-500 mt-1">
+              Steps to use postimages.org:
+              <ol className="list-decimal ml-5 mt-1 space-y-1">
+                <li>Visit postimages.org</li>
+                <li>Click "Choose Images" and select your file</li>
+                <li>After upload, copy the "Direct link" URL</li>
+                <li>Paste the URL here</li>
+              </ol>
+            </p>
+            {error && <p className="text-red-600 text-sm mt-1">{error}</p>}
+            {imageUrl && (
+              <img
+                src={imageUrl}
+                alt="Preview"
+                className="mt-4 max-h-64 object-contain rounded-lg"
+                onError={() => {
+                  setError('Unable to load image. Please check the URL.');
+                }}
+              />
             )}
           </div>
 

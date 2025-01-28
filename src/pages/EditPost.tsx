@@ -5,7 +5,8 @@ import { db } from '../lib/firebase';
 import { useAuth } from '../contexts/AuthContext';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { Info } from 'lucide-react';
+import { Info, ArrowLeft } from 'lucide-react';
+import BackButton from '../components/BackButton';
 
 export default function EditPost() {
   const [title, setTitle] = useState('');
@@ -81,6 +82,10 @@ export default function EditPost() {
 
   return (
     <div className="max-w-7xl mx-auto px-4">
+      <div className="mb-6">
+        <BackButton />
+      </div>
+      
       <h1 className="text-3xl font-bold mb-8">Edit Post</h1>
       
       {error && <p className="text-red-600 mb-4">{error}</p>}

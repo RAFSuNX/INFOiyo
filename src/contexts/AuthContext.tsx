@@ -9,7 +9,7 @@ import {
   updateProfile
 } from 'firebase/auth';
 import { auth, db } from '../lib/firebase';
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, serverTimestamp, collection, query, where, getDocs } from 'firebase/firestore';
 import { UserProfile } from '../types/user';
 
 interface AuthContextType {
@@ -52,6 +52,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   const signup = async (email: string, password: string, username: string) => {
+    // Check if username is already taken
+    const usersRef = collection(db, 'users');
+    const usernameQuery = query(usersRef, where('displayName', '==', username));
+    const usernameSnapshot = await getDocs(usernameQuery);
+    
+    if (!usernameSnapshot.empty) {
+      throw new Error('Username is already taken');
+    }
+
     const { user } = await createUserWithEmailAndPassword(auth, email, password);
     await updateProfile(user, { displayName: username });
     await sendEmailVerification(user);

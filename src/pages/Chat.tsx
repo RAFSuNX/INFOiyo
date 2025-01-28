@@ -2,7 +2,11 @@ import { useState, useEffect, useRef } from 'react';
 import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, limit, doc, getDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useAuth } from '../contexts/AuthContext';
-import { AlertCircle, Send, MessageCircle, Flag } from 'lucide-react';
+import { AlertCircle, Send, MessageCircle, Flag, ArrowLeft } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { useErrorHandler } from '../hooks/useErrorHandler';
+import { handleApiError } from '../utils/errorHandler';
+import ErrorAlert from '../components/ErrorAlert';
 
 interface ChatMessage {
   id: string;
@@ -82,14 +86,17 @@ export default function Chat() {
   const [newMessage, setNewMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [reportedMessage, setReportedMessage] = useState<ChatMessage | null>(null);
+  const { error, handleError, clearError } = useErrorHandler();
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [shouldScrollToBottom, setShouldScrollToBottom] = useState(true);
   const { user, userProfile } = useAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (!user?.emailVerified) return;
 
     const messagesRef = collection(db, 'chat');
-    const q = query(messagesRef, orderBy('createdAt', 'desc'), limit(50));
+    const q = query(messagesRef, orderBy('createdAt', 'desc'), limit(100));
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const messagesData = snapshot.docs.map(doc => ({
@@ -97,21 +104,42 @@ export default function Chat() {
         ...doc.data()
       } as ChatMessage));
       setMessages(messagesData.reverse());
-      scrollToBottom();
+      if (shouldScrollToBottom) {
+        scrollToBottom();
+      }
     });
 
     return () => unsubscribe();
-  }, [user?.emailVerified]);
+  }, [user?.emailVerified, shouldScrollToBottom]);
+
+  useEffect(() => {
+    if (shouldScrollToBottom) {
+      scrollToBottom();
+    }
+  }, [messages, shouldScrollToBottom]);
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
+    const isNearBottom = scrollHeight - scrollTop - clientHeight < 100;
+    setShouldScrollToBottom(isNearBottom);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !newMessage.trim()) return;
+    clearError();
 
     try {
+      if (newMessage.length > 500) {
+        throw new Error('Message is too long. Maximum 500 characters allowed.');
+      }
+
       setSubmitting(true);
       await addDoc(collection(db, 'chat'), {
         content: newMessage.trim(),
@@ -121,7 +149,7 @@ export default function Chat() {
       });
       setNewMessage('');
     } catch (error) {
-      console.error('Error sending message:', error);
+      handleError(handleApiError(error));
     } finally {
       setSubmitting(false);
     }
@@ -130,7 +158,6 @@ export default function Chat() {
   const handleReport = async (reason: string) => {
     if (!user || !reportedMessage) return;
 
-    // Check if user has already reported this message
     const reportRef = collection(db, 'reports');
     const reportedUserDoc = await getDoc(doc(db, 'users', reportedMessage.authorId));
     const reportedUser = reportedUserDoc.data();
@@ -147,6 +174,9 @@ export default function Chat() {
       status: 'pending',
       createdAt: serverTimestamp()
     });
+
+    // Show confirmation alert
+    alert('Report submitted successfully. An admin will review it shortly.');
   };
 
   if (!user) {
@@ -181,41 +211,62 @@ export default function Chat() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
-      <div className="flex items-center gap-3 mb-8">
-        <MessageCircle className="h-8 w-8" />
-        <h1 className="text-3xl font-bold">Community Chat</h1>
+    <div className="fixed inset-0 flex flex-col bg-white">
+      <div className="flex items-center gap-3 p-4 border-b border-black bg-white">
+        {error && <ErrorAlert message={error.message} onClose={clearError} />}
+        <button
+          onClick={() => navigate('/')}
+          className="p-2 hover:bg-gray-100 rounded-lg transition-colors duration-200"
+          aria-label="Back to home"
+        >
+          <ArrowLeft className="h-6 w-6" />
+        </button>
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-500">INFOiyo™</h1>
       </div>
 
-      <div className="bg-white border border-black rounded-lg overflow-hidden">
-        <div className="h-[600px] flex flex-col">
-          <div className="flex-1 overflow-y-auto p-6 space-y-4">
-            {messages.map((message) => (
-              <div
-                key={message.id}
-                className={`flex ${message.authorId === user.uid ? 'justify-end' : 'justify-start'}`}
-              >
-                <div className={`group relative max-w-[70%] ${message.authorId === user.uid ? 'bg-black text-white' : 'bg-gray-100'} rounded-lg p-4`}>
-                  <div className={`text-xs mb-1 ${message.authorId === user.uid ? 'text-gray-300' : 'text-gray-500'}`}>
-                    {message.author}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <div 
+          className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-3 scroll-smooth flex flex-col"
+          onScroll={handleScroll} 
+        >
+          {messages.map((message) => (
+            <div
+              key={message.id}
+              className={`flex ${message.authorId === user.uid ? 'justify-end' : 'justify-start'}`}
+            >
+              <div className={`group relative max-w-[85%] sm:max-w-[70%] ${
+                message.authorId === user.uid 
+                  ? 'bg-black text-white ml-4' 
+                  : 'bg-gray-100 mr-4'
+              } rounded-2xl px-4 py-2 shadow-sm break-words`}>
+                <p className="whitespace-pre-wrap break-words text-base">{message.content}</p>
+                <div className="flex items-center gap-2 mt-1">
+                  <div className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-medium
+                    ${message.authorId === user.uid ? 'bg-white text-black' : 'bg-black text-white'}`}>
+                    {message.author[0].toUpperCase()}
                   </div>
-                  <p className="whitespace-pre-wrap break-words">{message.content}</p>
-                  {message.authorId !== user.uid && (
-                    <button
-                      onClick={() => setReportedMessage(message)}
-                      className="absolute top-2 right-2 p-1 rounded-full opacity-0 group-hover:opacity-100 hover:bg-gray-200 transition-opacity duration-200"
-                      title="Report message"
-                    >
-                      <Flag className="h-4 w-4 text-gray-500" />
-                    </button>
-                  )}
+                  <div className={`text-[10px] ${message.authorId === user.uid ? 'text-gray-300' : 'text-gray-500'}`}>
+                    {message.author}
+                    <span className="mx-1">•</span>
+                    {message.createdAt?.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </div>
                 </div>
+                {message.authorId !== user.uid && userProfile?.status !== 'banned' && (
+                  <button
+                    onClick={() => setReportedMessage(message)}
+                    className="absolute -right-8 top-1/2 -translate-y-1/2 p-2 rounded-full opacity-0 group-hover:opacity-100 hover:bg-gray-100 transition-all duration-200"
+                    title="Report message"
+                  >
+                    <Flag className="h-4 w-4 text-gray-500" />
+                  </button>
+                )}
               </div>
-            ))}
-            <div ref={messagesEndRef} />
-          </div>
+            </div>
+          ))}
+          <div ref={messagesEndRef} />
+        </div>
 
-          <div className="border-t border-black p-4">
+        <div className="border-t border-black p-3 sm:p-4 bg-gray-50 shadow-lg">
             {userProfile?.status === 'banned' ? (
               <div className="bg-red-50 border border-red-200 rounded-lg p-4">
                 <div className="flex items-center gap-2">
@@ -229,23 +280,28 @@ export default function Chat() {
                   type="text"
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSubmit(e);
+                    }
+                  }}
                   placeholder="Type your message..."
-                  className="flex-1 border border-black rounded-lg px-4 py-2 focus:ring-2 focus:ring-black focus:outline-none"
+                  className="flex-1 border border-black rounded-full px-6 py-3 focus:ring-2 focus:ring-black focus:outline-none"
                   maxLength={500}
                 />
                 <button
                   type="submit"
                   disabled={submitting || !newMessage.trim()}
-                  className="px-6 py-2 bg-black text-white rounded-lg hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition duration-200 flex items-center gap-2"
+                  className="px-4 sm:px-6 py-3 bg-black text-white rounded-full hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition duration-200 flex items-center gap-2 shadow-sm"
                 >
                   <Send className="h-4 w-4" />
-                  Send
+                  <span className="hidden sm:inline">Send</span>
                 </button>
               </form>
             )}
           </div>
         </div>
-      </div>
 
       {reportedMessage && (
         <ReportModal

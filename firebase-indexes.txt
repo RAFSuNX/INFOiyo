@@ -51,6 +51,24 @@ Unique: Yes
 
 This ensures unique slugs for blog posts.
 
+## 6. Writer Applications Collection Index
+Collection: `writer_applications`
+Fields:
+- `status` (Ascending)
+- `createdAt` (Descending)
+
+This index supports the pending applications query:
+```javascript
+query(applicationsRef, where('status', '==', 'pending'), orderBy('createdAt', 'desc'))
+```
+
+## 7. Username Uniqueness Index
+Collection: `users`
+Field: `displayName` (Ascending)
+Unique: Yes
+
+This ensures unique usernames across the platform.
+
 ## How to Create These Indexes
 
 1. Go to Firebase Console
@@ -93,6 +111,22 @@ This ensures unique slugs for blog posts.
 1. Collection ID: `posts`
 2. Add field:
    - Field path: `slug`
+3. Query scope: Collection
+4. Check "Unique"
+5. Click "Create index"
+
+### For Writer Applications Index:
+1. Collection ID: `writer_applications`
+2. Add fields:
+   - Field path: `status`, Order: Ascending
+   - Field path: `createdAt`, Order: Descending
+3. Query scope: Collection
+4. Click "Create index"
+
+### For Username Uniqueness Index:
+1. Collection ID: `users`
+2. Add field:
+   - Field path: `displayName`
 3. Query scope: Collection
 4. Check "Unique"
 5. Click "Create index"

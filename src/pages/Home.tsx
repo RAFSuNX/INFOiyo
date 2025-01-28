@@ -118,7 +118,10 @@ export default function Home() {
 
       <div className="space-y-10">
         {filteredPosts.map((post) => (
-          <article key={`${post.id}-${post.slug}`} className="border border-black border-[1px] p-4 sm:p-6 rounded-lg">
+          <article 
+            key={post.id} 
+            className="border border-black border-[1px] p-4 sm:p-6 rounded-lg hover-lift animate-fade-in"
+          >
             {post.imageUrl && (
               <img
                 src={post.imageUrl}

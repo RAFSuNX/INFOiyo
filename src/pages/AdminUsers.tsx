@@ -6,6 +6,7 @@ import { UserProfile, UserRole, PostStatus } from '../types/user';
 import { Shield, UserX, UserCheck, Flag, Search, ChevronDown, PenLine } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import BackButton from '../components/BackButton';
 
 interface Report {
   id: string;
@@ -18,6 +19,18 @@ interface Report {
   reporterUserName: string;
   reason: string;
   status: 'pending' | 'resolved';
+  createdAt: any;
+}
+
+interface WriterApplication {
+  id: string;
+  userId: string;
+  username: string;
+  email: string;
+  reason: string;
+  experience: string;
+  topics: string;
+  status: 'pending' | 'approved' | 'rejected';
   createdAt: any;
 }
 
@@ -36,9 +49,10 @@ interface PendingPost {
 export default function AdminUsers() {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [reports, setReports] = useState<Report[]>([]);
+  const [applications, setApplications] = useState<WriterApplication[]>([]);
   const [pendingPosts, setPendingPosts] = useState<PendingPost[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'users' | 'reports' | 'posts'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'reports' | 'posts' | 'applications'>('users');
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredUsers, setFilteredUsers] = useState<UserProfile[]>([]);
   const [updatingRole, setUpdatingRole] = useState<string | null>(null);
@@ -48,13 +62,16 @@ export default function AdminUsers() {
     const fetchData = async () => {
       const usersRef = collection(db, 'users');
       const reportsRef = collection(db, 'reports');
+      const applicationsRef = collection(db, 'writer_applications');
       const postsRef = collection(db, 'posts');
       const reportsQuery = query(reportsRef, where('status', '==', 'pending'), orderBy('createdAt', 'desc'));
+      const applicationsQuery = query(applicationsRef, where('status', '==', 'pending'), orderBy('createdAt', 'desc'));
       const postsQuery = query(postsRef, where('status', '==', 'pending'), orderBy('createdAt', 'desc'));
 
-      const [usersSnapshot, reportsSnapshot, postsSnapshot] = await Promise.all([
+      const [usersSnapshot, reportsSnapshot, applicationsSnapshot, postsSnapshot] = await Promise.all([
         getDocs(query(usersRef)),
         getDocs(reportsQuery),
+        getDocs(applicationsQuery),
         getDocs(postsQuery)
       ]);
 
@@ -67,6 +84,11 @@ export default function AdminUsers() {
         ...doc.data(),
         id: doc.id,
       } as Report));
+      
+      const applicationsData = applicationsSnapshot.docs.map(doc => ({
+        ...doc.data(),
+        id: doc.id,
+      } as WriterApplication));
 
       const postsData = postsSnapshot.docs.map(doc => ({
         id: doc.id,
@@ -76,6 +98,7 @@ export default function AdminUsers() {
       setUsers(usersData);
       setFilteredUsers(usersData);
       setReports(reportsData);
+      setApplications(applicationsData);
       setPendingPosts(postsData);
       setLoading(false);
     };
@@ -150,6 +173,32 @@ export default function AdminUsers() {
     }
   };
 
+  const handleApplicationAction = async (applicationId: string, userId: string, action: 'approved' | 'rejected') => {
+    try {
+      // Update application status
+      await updateDoc(doc(db, 'writer_applications', applicationId), {
+        status: action
+      });
+
+      // If approved, update user role to writer
+      if (action === 'approved') {
+        await updateDoc(doc(db, 'users', userId), {
+          role: 'writer'
+        });
+
+        // Update local state
+        setUsers(users.map(user => 
+          user.uid === userId ? { ...user, role: 'writer' } : user
+        ));
+      }
+
+      // Remove application from list
+      setApplications(applications.filter(app => app.id !== applicationId));
+    } catch (error) {
+      console.error('Error handling application:', error);
+    }
+  };
+
   const formatDate = (timestamp: any) => {
     if (!timestamp) return 'N/A';
     const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
@@ -171,6 +220,10 @@ export default function AdminUsers() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
+      <div className="mb-6">
+        <BackButton to="/" />
+      </div>
+      
       <div className="flex items-center gap-3 mb-8">
         <Shield className="h-8 w-8" />
         <h1 className="text-3xl font-bold">Admin Dashboard</h1>
@@ -202,6 +255,14 @@ export default function AdminUsers() {
         >
           <PenLine className="h-4 w-4" />
           Pending Posts {pendingPosts.length > 0 && `(${pendingPosts.length})`}
+        </button>
+        <button
+          onClick={() => setActiveTab('applications')}
+          className={`px-4 py-2 rounded-lg flex items-center gap-2 ${
+            activeTab === 'applications' ? 'bg-black text-white' : 'border border-black'
+          }`}
+        >
+          Writer Applications {applications.length > 0 && `(${applications.length})`}
         </button>
       </div>
 
@@ -381,6 +442,66 @@ export default function AdminUsers() {
                         className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800"
                       >
                         Resolve Report
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : activeTab === 'applications' ? (
+        <div className="bg-white border border-black rounded-lg overflow-hidden">
+          {applications.length === 0 ? (
+            <div className="text-center py-12">
+              <h3 className="text-lg font-medium text-gray-900">No pending applications</h3>
+              <p className="text-gray-500">All writer applications have been reviewed</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-gray-200">
+              {applications.map((application) => (
+                <div key={application.id} className="p-6">
+                  <div className="flex justify-between items-start mb-4">
+                    <div>
+                      <h3 className="text-lg font-medium">{application.username}</h3>
+                      <p className="text-sm text-gray-500">{application.email}</p>
+                    </div>
+                    <span className="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                      {application.status}
+                    </span>
+                  </div>
+                  
+                  <div className="space-y-4 mb-6">
+                    <div>
+                      <h4 className="font-medium mb-2">Motivation</h4>
+                      <p className="text-gray-600">{application.reason}</p>
+                    </div>
+                    <div>
+                      <h4 className="font-medium mb-2">Writing Experience</h4>
+                      <p className="text-gray-600">{application.experience}</p>
+                    </div>
+                    <div>
+                      <h4 className="font-medium mb-2">Topics of Interest</h4>
+                      <p className="text-gray-600">{application.topics}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-between items-center">
+                    <p className="text-sm text-gray-500">
+                      Applied on {formatDate(application.createdAt)}
+                    </p>
+                    <div className="flex gap-4">
+                      <button
+                        onClick={() => handleApplicationAction(application.id, application.userId, 'rejected')}
+                        className="px-4 py-2 border border-red-300 text-red-700 rounded-lg hover:bg-red-50"
+                      >
+                        Reject
+                      </button>
+                      <button
+                        onClick={() => handleApplicationAction(application.id, application.userId, 'approved')}
+                        className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800"
+                      >
+                        Approve
                       </button>
                     </div>
                   </div>
