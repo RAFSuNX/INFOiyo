@@ -1,6 +1,6 @@
 /* TEAM */
   Creator: INFOiyo Team
-  Contact: team@infoyio.com
+  Contact: team@infoyio.cc
   Twitter: @infoyio
   Location: Global
 
