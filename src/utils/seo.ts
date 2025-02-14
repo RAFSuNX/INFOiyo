@@ -65,7 +65,7 @@ export function generateArticleSchema(post: {
   imageUrl?: string;
   slug: string;
 }) {
-  const siteUrl = import.meta.env.VITE_SITE_URL || 'https://infoyio.cc';
+  const siteUrl = 'https://infoiyo.cc';
   const description = post.content.length > 160 ? post.content.slice(0, 157) + '...' : post.content;
 
   return {

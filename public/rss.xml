@@ -2,10 +2,10 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>INFOiyo Blog</title>
-    <link>https://infoyio.com</link>
+    <link>https://infoiyo.cc</link>
     <description>Discover insightful articles and join meaningful discussions on INFOiyo.</description>
     <language>en-US</language>
-    <atom:link href="https://infoyio.com/rss.xml" rel="self" type="application/rss+xml"/>
+    <atom:link href="https://infoiyo.cc/rss.xml" rel="self" type="application/rss+xml"/>
     <copyright>Copyright © 2024 INFOiyo. All rights reserved.</copyright>
     <lastBuildDate>Mon, 26 Feb 2024 12:00:00 GMT</lastBuildDate>
     <category>Blog</category>
@@ -13,8 +13,8 @@
     <category>Articles</category>
     <docs>https://validator.w3.org/feed/docs/rss2.html</docs>
     <generator>INFOiyo RSS Generator</generator>
-    <managingEditor>team@infoyio.com (INFOiyo Team)</managingEditor>
-    <webMaster>team@infoyio.com (INFOiyo Team)</webMaster>
+    <managingEditor>team@infoiyo.cc (INFOiyo Team)</managingEditor>
+    <webMaster>team@infoiyo.cc (INFOiyo Team)</webMaster>
     <ttl>60</ttl>
   </channel>
 </rss>

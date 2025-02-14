@@ -16,17 +16,21 @@ export default function Home() {
   };
 
   return (
-    <div className="h-screen flex flex-col items-center justify-center px-4 bg-gradient-to-b from-white to-gray-50">
+    <div className="min-h-screen flex flex-col items-center justify-center px-4 bg-gradient-to-b from-white to-gray-50">
       <SEO
         title="Home"
-        description="Discover insightful articles and join meaningful discussions on INFOiyo."
+        description="INFOiyo - Your premier platform for engaging discussions and insightful content. Join our community to share knowledge and explore ideas."
         keywords="blog, articles, community, discussions, knowledge sharing"
       />
       
-      <div className="mb-12 flex items-center">
+      <h1 className="mb-12 flex items-center text-4xl sm:text-5xl font-bold">
         <PenLine className="h-12 w-12 sm:h-16 sm:w-16" />
-        <h1 className="text-4xl sm:text-5xl font-bold ml-4 bg-clip-text text-transparent bg-gradient-to-r from-black to-gray-600">INFOiyo</h1>
-      </div>
+        <span className="ml-4 bg-clip-text text-transparent bg-gradient-to-r from-black to-gray-600">INFOiyo</span>
+      </h1>
+      
+      <h2 className="text-xl sm:text-2xl text-gray-600 mb-8 text-center">
+        Your Premier Platform for Knowledge Sharing
+      </h2>
 
       <form onSubmit={handleSearch} className="w-full max-w-2xl mb-8">
         <div className="relative">
@@ -47,12 +51,18 @@ export default function Home() {
         </div>
       </form>
       
-      <div className="flex flex-wrap justify-center gap-4 animate-fade-in">
+      <nav className="flex flex-wrap justify-center gap-4 animate-fade-in">
         <Link
           to="/explore"
           className="px-8 py-3 bg-black text-white rounded-full hover:bg-gray-800 transition-all duration-300 shadow-sm hover:shadow-md hover:scale-105"
         >
           Explore Articles
+        </Link>
+        <Link
+          to="/markdown-guide"
+          className="px-8 py-3 border border-black rounded-full hover:bg-black hover:text-white transition-all duration-300 shadow-sm hover:shadow-md hover:scale-105"
+        >
+          Writing Guide
         </Link>
         <Link
           to="/chat"
@@ -79,7 +89,7 @@ export default function Home() {
             </Link>
           </>
         )}
-      </div>
+      </nav>
     </div>
   );
 }

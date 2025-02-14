@@ -14,3 +14,23 @@ Allow: /markdown-guide
 Crawl-delay: 10
 
 Sitemap: https://infoiyo.cc/sitemap.xml
+
+# Additional SEO optimizations
+Allow: /*.js
+Allow: /*.css
+Allow: /*.png
+Allow: /*.jpg
+Allow: /*.gif
+Allow: /*.svg
+Allow: /*.ico
+
+# Prevent duplicate content
+Disallow: /*?*
+Disallow: /*?
+Disallow: /*/amp/
+
+# Block internal search results
+Disallow: /search
+
+# Block preview pages
+Disallow: /preview/

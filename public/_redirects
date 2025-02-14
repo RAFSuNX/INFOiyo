@@ -1,0 +1,14 @@
+# Redirect www to non-www
+http://www.infoiyo.cc/* https://infoiyo.cc/:splat 301!
+https://www.infoiyo.cc/* https://infoiyo.cc/:splat 301!
+
+# Redirect HTTP to HTTPS
+http://infoiyo.cc/* https://infoiyo.cc/:splat 301!
+
+# Handle trailing slashes
+/*/ /:splat 301
+
+# Handle common typos and variations
+/blog/* /post/:splat 301
+/posts/* /post/:splat 301
+/articles/* /post/:splat 301
