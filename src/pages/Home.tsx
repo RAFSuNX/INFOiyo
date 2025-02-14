@@ -79,12 +79,6 @@ export default function Home() {
           Explore Articles
         </Link>
         <Link
-          to="/markdown-guide"
-          className="px-8 py-3 border border-black rounded-full hover:bg-black hover:text-white transition-all duration-300 shadow-sm hover:shadow-md hover:scale-105"
-        >
-          Writing Guide
-        </Link>
-        <Link
           to="/chat"
           className="inline-flex items-center px-8 py-3 border border-black rounded-full hover:bg-black hover:text-white transition-all duration-300 shadow-sm hover:shadow-md hover:scale-105"
         >
