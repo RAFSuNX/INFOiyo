@@ -13,4 +13,4 @@ Allow: /markdown-guide
 # Crawl-delay for better server performance
 Crawl-delay: 10
 
-Sitemap: https://infoyio.cc/sitemap.xml
+Sitemap: https://infoiyo.cc/sitemap.xml
