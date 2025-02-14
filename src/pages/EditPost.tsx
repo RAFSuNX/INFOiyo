@@ -3,20 +3,22 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { doc, getDoc, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useAuth } from '../contexts/AuthContext';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import { Info, ArrowLeft } from 'lucide-react';
+import MarkdownRenderer from '../components/MarkdownRenderer';
+import { Info } from 'lucide-react';
 import BackButton from '../components/BackButton';
+import { useErrorHandler } from '../hooks/useErrorHandler';
+import { handleApiError } from '../utils/errorHandler';
+import ErrorAlert from '../components/ErrorAlert';
 
 export default function EditPost() {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
   const [showPreview, setShowPreview] = useState(false);
   const { slug } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { error, handleError, clearError } = useErrorHandler();
 
   useEffect(() => {
     const fetchPost = async () => {
@@ -42,14 +44,14 @@ export default function EditPost() {
         setTitle(postData.title);
         setContent(postData.content);
       } catch (err) {
-        setError('Failed to fetch post');
+        handleError(handleApiError(err));
       } finally {
         setLoading(false);
       }
     };
 
     fetchPost();
-  }, [slug, user, navigate]);
+  }, [slug, user, navigate, handleError]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,6 +59,15 @@ export default function EditPost() {
 
     try {
       setLoading(true);
+      clearError();
+
+      if (!title.trim()) {
+        throw new Error('Title is required');
+      }
+      if (!content.trim()) {
+        throw new Error('Content is required');
+      }
+
       const postsRef = collection(db, 'posts');
       const q = query(postsRef, where('slug', '==', slug));
       const snapshot = await getDocs(q);
@@ -66,12 +77,13 @@ export default function EditPost() {
       }
       
       await updateDoc(doc(db, 'posts', snapshot.docs[0].id), {
-        title,
-        content,
+        title: title.trim(),
+        content: content.trim(),
       });
       navigate(`/post/${slug}`);
     } catch (err) {
-      setError('Failed to update post');
+      handleError(handleApiError(err));
+    } finally {
       setLoading(false);
     }
   };
@@ -88,7 +100,7 @@ export default function EditPost() {
       
       <h1 className="text-3xl font-bold mb-8">Edit Post</h1>
       
-      {error && <p className="text-red-600 mb-4">{error}</p>}
+      {error && <ErrorAlert message={error.message} onClose={clearError} />}
       
       <div className="flex flex-col md:flex-row gap-8">
         <form onSubmit={handleSubmit} className="flex-1 space-y-6">
@@ -133,7 +145,7 @@ export default function EditPost() {
               />
             ) : (
               <div className="border border-black rounded-lg p-4 min-h-[400px] prose prose-sm md:prose-base lg:prose-lg max-w-none">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>{content || 'Nothing to preview'}</ReactMarkdown>
+                <MarkdownRenderer content={content || 'Nothing to preview'} />
               </div>
             )}
           </div>
@@ -159,7 +171,7 @@ export default function EditPost() {
         <div className="w-full md:w-96">
           <div className="sticky top-4">
             <div className="flex items-center gap-2 mb-4">
-              <Info size={20} />
+              <Info className="h-5 w-5" />
               <h3 className="font-bold text-lg">Markdown Supported</h3>
             </div>
             <div className="text-sm text-gray-600">

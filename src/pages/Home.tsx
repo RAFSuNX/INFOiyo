@@ -1,159 +1,83 @@
-import { useState, useEffect, useCallback } from 'react';
-import { collection, getDocs, orderBy, query, where, limit } from 'firebase/firestore';
-import { db, getCachedData, setCachedData, checkRateLimit, invalidatePostCache } from '../lib/firebase';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import ReactMarkdown from 'react-markdown';
-import { Search } from 'lucide-react';
-import { PostStatus } from '../types/user';
+import { Search, PenLine, MessageCircle, UserPlus, LogIn } from 'lucide-react';
 import SEO from '../components/SEO';
-import { updateOldPosts } from '../utils/updateOldPosts';
-
-interface Post {
-  id: string;
-  title: string;
-  content: string;
-  slug: string;
-  status: PostStatus;
-  excerpt?: string;
-  imageUrl?: string;
-  author: string;
-  createdAt: any;
-}
+import { useAuth } from '../contexts/AuthContext';
 
 export default function Home() {
-  const [posts, setPosts] = useState<Post[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filteredPosts, setFilteredPosts] = useState<Post[]>([]);
-  const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
-  const postsPerPage = 10;
-
-  const fetchPosts = useCallback(async () => {
-    // Generate cache key based on page
-    const cacheKey = `home-posts-${page}`;
-    
-    const cachedPosts = getCachedData(cacheKey);
-    if (cachedPosts) {
-      setPosts(prev => [...prev, ...cachedPosts]);
-      setFilteredPosts(cachedPosts);
-      return;
-    }
-
-    // Check rate limit
-    if (!checkRateLimit()) {
-      console.warn('Rate limit exceeded, using cached data if available');
-      return;
-    }
-
-    const postsRef = collection(db, 'posts');
-    const q = query(
-      postsRef,
-      where('status', '==', 'approved'),
-      orderBy('createdAt', 'desc'),
-      limit(postsPerPage)
-    );
-    const snapshot = await getDocs(q);
-    const postsData = snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    } as Post));
-    
-    setPosts(prev => [...prev, ...postsData]);
-    setFilteredPosts(postsData);
-    setHasMore(postsData.length === postsPerPage);
-
-    // Cache the results
-    setCachedData(cacheKey, postsData);
-  }, [page]);
-
-  const loadMore = () => {
-    if (hasMore) {
-      setPage(prev => prev + 1);
+  const { user } = useAuth();
+  
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchTerm.trim()) {
+      window.location.href = `/explore?q=${encodeURIComponent(searchTerm)}`;
     }
   };
 
-  useEffect(() => {
-    const init = async () => {
-      await updateOldPosts();
-      await fetchPosts();
-    };
-    init();
-  }, [fetchPosts]);
-
-
-  useEffect(() => {
-    const results = posts.filter(post =>
-      post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      post.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      post.author.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-    setFilteredPosts(results);
-  }, [searchTerm, posts]);
-
   return (
-    <div>
+    <div className="h-screen flex flex-col items-center justify-center px-4 bg-gradient-to-b from-white to-gray-50">
       <SEO
         title="Home"
         description="Discover insightful articles and join meaningful discussions on INFOiyo."
         keywords="blog, articles, community, discussions, knowledge sharing"
       />
       
-      <div className="mb-8">
+      <div className="mb-12 flex items-center">
+        <PenLine className="h-12 w-12 sm:h-16 sm:w-16" />
+        <h1 className="text-4xl sm:text-5xl font-bold ml-4 bg-clip-text text-transparent bg-gradient-to-r from-black to-gray-600">INFOiyo</h1>
+      </div>
+
+      <form onSubmit={handleSearch} className="w-full max-w-2xl mb-8">
         <div className="relative">
           <input
             type="text"
-            placeholder="Search posts..."
+            placeholder="Search articles..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full px-4 py-3 pl-12 border border-black rounded-lg focus:ring-2 focus:ring-black focus:outline-none"
+            className="w-full px-5 py-4 pl-12 text-lg border border-black rounded-full focus:ring-2 focus:ring-black focus:outline-none shadow-sm hover:shadow-md transition-all duration-300 glass"
           />
-          <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500 h-5 w-5" />
-        </div>
-        {searchTerm && (
-          <p className="mt-2 text-sm text-gray-600">
-            Found {filteredPosts.length} {filteredPosts.length === 1 ? 'result' : 'results'}
-          </p>
-        )}
-      </div>
-
-      <div className="space-y-10">
-        {filteredPosts.map((post) => (
-          <article 
-            key={post.id} 
-            className="border border-black border-[1px] p-4 sm:p-6 rounded-lg hover-lift animate-fade-in"
+          <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500 h-6 w-6" />
+          <button
+            type="submit"
+            className="absolute right-3 top-1/2 transform -translate-y-1/2 px-6 py-2 bg-black text-white rounded-full hover:bg-gray-800 transition-all duration-300 shadow-sm hover:shadow-md hover:scale-105"
           >
-            {post.imageUrl && (
-              <img
-                src={post.imageUrl}
-                alt={post.title}
-                className="w-full h-48 sm:h-64 object-cover rounded-lg mb-4 sm:mb-6"
-                loading="lazy"
-              />
-            )}
-            <Link to={`/post/${post.slug}`}>
-              <h2 className="text-xl sm:text-2xl font-bold mb-2 sm:mb-4 hover:text-gray-600">{post.title}</h2>
-            </Link>
-            <div className="prose max-w-none line-clamp-3">
-              <p>{post.excerpt || post.content.slice(0, 160)}</p>
-            </div>
-            <div className="mt-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-0 text-sm text-gray-600">
-              <span>By {post.author}</span>
-              <span>{post.createdAt?.toDate().toLocaleDateString()}</span>
-            </div>
+            Search
+          </button>
+        </div>
+      </form>
+      
+      <div className="flex flex-wrap justify-center gap-4 animate-fade-in">
+        <Link
+          to="/explore"
+          className="px-8 py-3 bg-black text-white rounded-full hover:bg-gray-800 transition-all duration-300 shadow-sm hover:shadow-md hover:scale-105"
+        >
+          Explore Articles
+        </Link>
+        <Link
+          to="/chat"
+          className="inline-flex items-center px-8 py-3 border border-black rounded-full hover:bg-black hover:text-white transition-all duration-300 shadow-sm hover:shadow-md hover:scale-105"
+        >
+          <MessageCircle className="h-5 w-5 mr-2" />
+          Chat
+        </Link>
+        {!user && (
+          <>
             <Link
-              to={`/post/${post.slug}`}
-              className="mt-4 inline-block text-sm hover:text-gray-600"
+              to="/signin"
+              className="inline-flex items-center px-8 py-3 border border-black rounded-full hover:bg-black hover:text-white transition-all duration-300 shadow-sm hover:shadow-md hover:scale-105"
             >
-              Read more →
+              <LogIn className="h-5 w-5 mr-2" />
+              Sign In
             </Link>
-          </article>
-        ))}
-
-        {filteredPosts.length === 0 && searchTerm && (
-          <div className="text-center py-12 border border-black rounded-lg">
-            <p className="text-xl font-semibold mb-2">No posts found</p>
-            <p className="text-gray-600">Try adjusting your search terms</p>
-          </div>
+            <Link
+              to="/signup"
+              className="inline-flex items-center px-8 py-3 border border-black rounded-full hover:bg-black hover:text-white transition-all duration-300 shadow-sm hover:shadow-md hover:scale-105"
+            >
+              <UserPlus className="h-5 w-5 mr-2" />
+              Sign Up
+            </Link>
+          </>
         )}
       </div>
     </div>

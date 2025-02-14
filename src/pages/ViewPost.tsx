@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { doc, getDoc, collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, where, getDocs, deleteDoc } from 'firebase/firestore';
 import { db, getCachedData, setCachedData, checkRateLimit, invalidatePostCache } from '../lib/firebase';
 import { useAuth } from '../contexts/AuthContext';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
+import MarkdownRenderer from '../components/MarkdownRenderer';
 import SEO from '../components/SEO';
 import BlogPostSchema from '../components/BlogPostSchema';
 import { AlertCircle, Trash2 } from 'lucide-react';
@@ -35,6 +34,7 @@ export default function ViewPost() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const { slug } = useParams();
+  const location = useLocation();
   const navigate = useNavigate();
   const [postId, setPostId] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -43,6 +43,9 @@ export default function ViewPost() {
   useEffect(() => {
     const fetchPost = async () => {
       if (!slug) return;
+
+      // Always start with loading state
+      setLoading(true);
       
       // Check cache first
       const cacheKey = `post-${slug}`;
@@ -50,6 +53,7 @@ export default function ViewPost() {
       if (cachedPost) {
         setPost(cachedPost);
         setPostId(cachedPost.id);
+        setLoading(false);
         return;
       }
 
@@ -68,15 +72,16 @@ export default function ViewPost() {
           const postDoc = snapshot.docs[0];
           setPostId(postDoc.id);
           setPost({ id: postDoc.id, ...postDoc.data() } as Post);
-          
-          // Cache the results
-          setCachedData(cacheKey, { id: postDoc.id, ...postDoc.data() });
+          const postData = { id: postDoc.id, ...postDoc.data() };
+          setCachedData(cacheKey, postData);
         } else {
           // Try fetching by ID for backward compatibility with old posts
           const postDoc = await getDoc(doc(db, 'posts', slug));
           if (postDoc.exists()) {
             setPostId(postDoc.id);
-            setPost({ id: postDoc.id, ...postDoc.data() } as Post);
+            const postData = { id: postDoc.id, ...postDoc.data() } as Post;
+            setPost(postData);
+            setCachedData(cacheKey, postData);
           }
         }
       } catch (error) {
@@ -87,6 +92,13 @@ export default function ViewPost() {
     };
 
     fetchPost();
+    
+    // Cleanup function to reset states when unmounting or changing posts
+    return () => {
+      setPost(null);
+      setPostId(null);
+      setComments([]);
+    };
   }, [slug]);
 
   useEffect(() => {
@@ -245,7 +257,7 @@ export default function ViewPost() {
   };
 
   return (
-    <article className="max-w-4xl mx-auto px-4 overflow-x-hidden animate-fade-in">
+    <article className="max-w-4xl mx-auto px-4 overflow-x-hidden animate-fade-in pb-12">
       <SEO
         title={post.title}
         description={post.excerpt || post.content.slice(0, 160)}
@@ -260,14 +272,22 @@ export default function ViewPost() {
       <div className="mb-6">
         <BackButton />
       </div>
-      
-      <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-4 sm:mb-6">{post.title}</h1>
+
+      <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-4 sm:mb-6 bg-clip-text text-transparent bg-gradient-to-r from-black to-gray-600">
+        {post.title}
+      </h1>
 
       <div className="flex justify-between items-center mb-6">
-        <div className="text-sm text-gray-600">
-          <span>By {post.author}</span>
+        <div className="flex items-center text-sm text-gray-600">
+          <div className="h-8 w-8 rounded-full bg-black text-white flex items-center justify-center font-medium mr-3">
+            {post.author[0].toUpperCase()}
+          </div>
+          <div>
+            <div className="font-medium text-black">{post.author}</div>
+            <div>{post.createdAt?.toDate().toLocaleDateString()}</div>
+          </div>
           <span className="mx-2">•</span>
-          <span>{post.createdAt?.toDate().toLocaleDateString()}</span>
+          <span>{comments.length} comments</span>
         </div>
         {userProfile?.role === 'admin' && (
           <div>
@@ -312,47 +332,31 @@ export default function ViewPost() {
         <img
           src={post.imageUrl}
           alt={post.title}
-          className="w-full h-48 sm:h-64 md:h-96 object-cover rounded-lg mb-6 sm:mb-8"
+          className="w-full h-48 sm:h-64 md:h-96 object-cover rounded-lg mb-6 sm:mb-8 shadow-lg hover:shadow-xl transition-shadow duration-300"
         />
       )}
 
-      <div className="prose prose-sm sm:prose-base lg:prose-lg max-w-none mb-8 sm:mb-12 overflow-x-auto">
-        <ReactMarkdown 
-          remarkPlugins={[remarkGfm]}
-          components={{
-            img: ({node, ...props}) => (
-              <img 
-                {...props} 
-                loading="lazy"
-                className="rounded-lg max-w-full h-auto"
-                onError={(e) => {
-                  const target = e.currentTarget;
-                  target.onerror = null;
-                  target.src = '/placeholder-image.jpg';
-                }}
-              />
-            )
-          }}
-        >
-          {post.content}
-        </ReactMarkdown>
+      <div className="prose prose-sm sm:prose-base lg:prose-lg max-w-none mb-12 sm:mb-16 overflow-x-auto">
+        <MarkdownRenderer content={post.content} />
       </div>
 
       <div className="mt-12 border-t border-black pt-8">
-        <h2 className="text-2xl font-bold mb-4">Discussion ({comments.length})</h2>
+        <h2 className="text-2xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-black to-gray-600">
+          Discussion ({comments.length})
+        </h2>
         <p className="text-gray-600 mb-8">Join the conversation with our community.</p>
 
         <div className="space-y-8 mb-12">
           {comments.length === 0 ? (
-            <div className="text-center py-12 bg-gray-50 rounded-lg">
+            <div className="text-center py-12 bg-gray-50 rounded-lg border border-gray-200">
               <p className="text-gray-600 mb-2">No comments yet</p>
               <p className="text-sm text-gray-500">Be the first to share what you think!</p>
             </div>
           ) : (
             comments.map(comment => (
-              <div 
-                key={comment.id} 
-                className="bg-gray-50 rounded-lg p-6 animate-scale-in"
+              <div
+                key={comment.id}
+                className="bg-gray-50 rounded-lg p-6 animate-scale-in hover:shadow-md transition-shadow duration-300 border border-gray-200"
               >
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center">
@@ -374,7 +378,9 @@ export default function ViewPost() {
         </div>
 
         <div className="border-t border-gray-200 pt-8">
-          <h3 className="text-lg font-semibold mb-4">Leave a comment</h3>
+          <h3 className="text-lg font-semibold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-black to-gray-600">
+            Leave a comment
+          </h3>
           {renderCommentForm()}
         </div>
       </div>

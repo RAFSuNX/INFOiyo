@@ -1,6 +1,5 @@
 import { useState } from 'react';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
+import MarkdownRenderer from '../components/MarkdownRenderer';
 import { Book, Layout, Type, ListOrdered, Link as LinkIcon, Image, Code, Table } from 'lucide-react';
 import BackButton from '../components/BackButton';
 
@@ -169,9 +168,7 @@ function greet(name) {
                   <div>
                     <h3 className="font-semibold mb-3">Preview</h3>
                     <div className="prose prose-sm max-w-none bg-white p-4 rounded-lg border border-gray-200">
-                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                        {examples[selectedExample as keyof typeof examples].markdown}
-                      </ReactMarkdown>
+                      <MarkdownRenderer content={examples[selectedExample as keyof typeof examples].markdown} />
                     </div>
                   </div>
                 </div>

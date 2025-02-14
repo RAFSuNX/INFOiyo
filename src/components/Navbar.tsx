@@ -41,7 +41,7 @@ export default function Navbar() {
                 onClick={() => setIsMenuOpen(false)}
               >
                 <PenLine className="h-8 w-8" />
-                <span className="ml-2 text-xl font-bold">INFOiyo</span>
+                <span className="ml-2 text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-black to-gray-600">INFOiyo</span>
               </Link>
             </div>
 

@@ -32,7 +32,7 @@ export default function SignIn() {
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white py-8 px-4 border border-black border-[1px] sm:rounded-lg sm:px-10 animate-scale-in">
+        <div className="bg-white py-8 px-4 border border-black rounded-lg sm:px-10 animate-scale-in">
           {error && <ErrorAlert message={error.message} onClose={clearError} />}
           <form className="space-y-6" onSubmit={handleSubmit}>
             <div>
@@ -43,7 +43,7 @@ export default function SignIn() {
                 id="email"
                 type="email"
                 required
-                className="mt-1 block w-full border border-black border-[1px] rounded-md shadow-sm p-2"
+                className="mt-1 block w-full border border-black rounded-md shadow-sm p-2"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
@@ -57,7 +57,7 @@ export default function SignIn() {
                 id="password"
                 type="password"
                 required
-                className="mt-1 block w-full border border-black border-[1px] rounded-md shadow-sm p-2"
+                className="mt-1 block w-full border border-black rounded-md shadow-sm p-2"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
@@ -65,7 +65,7 @@ export default function SignIn() {
 
             <button
               type="submit"
-              className="w-full flex justify-center py-2 px-4 border border-black border-[1px] rounded-md shadow-sm text-sm font-medium hover:bg-black hover:text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-black transition-all duration-200"
+              className="w-full flex justify-center py-2 px-4 border border-black rounded-md shadow-sm text-sm font-medium hover:bg-black hover:text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-black transition-all duration-200"
             >
               Sign In
             </button>

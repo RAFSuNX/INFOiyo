@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import Navbar from './components/Navbar';
 import SignIn from './pages/SignIn';
+import Explore from './pages/Explore';
 import SignUp from './pages/SignUp';
 import Home from './pages/Home';
 import CreatePost from './pages/CreatePost';
@@ -19,13 +20,14 @@ function App() {
       <AuthProvider>
         <Routes>
           <Route path="/chat" element={<Chat />} />
+          <Route path="/" element={<Home />} />
           <Route path="*" element={
             <div className="min-h-screen bg-white overflow-x-hidden animate-fade-in">
               <Navbar />
               <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8 animate-slide-in">
                 <Routes>
-              <Route path="/" element={<Home />} />
               <Route path="/signin" element={<SignIn />} />
+              <Route path="/explore" element={<Explore />} />
               <Route path="/signup" element={<SignUp />} />
               <Route path="/create-post" element={<CreatePost />} />
               <Route path="/post/:slug" element={<ViewPost />} />

@@ -3,8 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { collection, addDoc, serverTimestamp, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useAuth } from '../contexts/AuthContext';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
+import MarkdownRenderer from '../components/MarkdownRenderer';
 import { Info, Book, AlertCircle } from 'lucide-react';
 import { slugify } from '../utils/slugify';
 import { PostStatus } from '../types/user';
@@ -184,7 +183,7 @@ export default function CreatePost() {
               />
             ) : (
               <div className="border border-black rounded-lg p-4 min-h-[300px] sm:min-h-[400px] prose prose-sm sm:prose-base lg:prose-lg max-w-none overflow-x-auto">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>{content || 'Nothing to preview'}</ReactMarkdown>
+                <MarkdownRenderer content={content || 'Nothing to preview'} />
               </div>
             )}
           </div>

@@ -4,8 +4,7 @@ import { db } from '../lib/firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { UserProfile, UserRole, PostStatus } from '../types/user';
 import { Shield, UserX, UserCheck, Flag, Search, ChevronDown, PenLine } from 'lucide-react';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
+import MarkdownRenderer from '../components/MarkdownRenderer';
 import BackButton from '../components/BackButton';
 
 interface Report {
@@ -534,11 +533,11 @@ export default function AdminUsers() {
                   <div className="bg-gray-50 rounded-lg p-4 mb-4">
                     <p className="text-sm text-gray-600 mb-2">Post Content:</p>
                     <div className="prose prose-sm">
-                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                        {post.content.length > 300 
-                          ? post.content.slice(0, 300) + '...' 
-                          : post.content}
-                      </ReactMarkdown>
+                      <MarkdownRenderer 
+                        content={post.content.length > 300 
+                          ? post.content.slice(0, 300) + '...'
+                          : post.content} 
+                      />
                     </div>
                   </div>
                   <div className="flex justify-between items-center">
