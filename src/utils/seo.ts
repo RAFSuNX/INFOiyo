@@ -110,3 +110,51 @@ export function generateBreadcrumbSchema(items: Array<{ name: string; url: strin
     }))
   };
 }
+
+/**
+ * Generates structured data for the website
+ */
+export function generateWebsiteSchema() {
+  const siteUrl = 'https://infoiyo.cc';
+
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    'name': 'INFOiyo',
+    'url': siteUrl,
+    'description': 'The premier platform for engaging discussions and insightful content.',
+    'potentialAction': {
+      '@type': 'SearchAction',
+      'target': {
+        '@type': 'EntryPoint',
+        'urlTemplate': `${siteUrl}/explore?q={search_term_string}`
+      },
+      'query-input': 'required name=search_term_string'
+    }
+  };
+}
+
+/**
+ * Generates structured data for the organization
+ */
+export function generateOrganizationSchema() {
+  const siteUrl = 'https://infoiyo.cc';
+
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    'name': 'INFOiyo',
+    'url': siteUrl,
+    'logo': `${siteUrl}/logo512.png`,
+    'sameAs': [
+      'https://twitter.com/infoiyo',
+      'https://facebook.com/infoiyo',
+      'https://linkedin.com/company/infoiyo'
+    ],
+    'contactPoint': {
+      '@type': 'ContactPoint',
+      'contactType': 'customer support',
+      'email': 'team@infoiyo.cc'
+    }
+  };
+}

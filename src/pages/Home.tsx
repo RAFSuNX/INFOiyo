@@ -3,10 +3,14 @@ import { Link } from 'react-router-dom';
 import { Search, PenLine, MessageCircle, UserPlus, LogIn } from 'lucide-react';
 import SEO from '../components/SEO';
 import { useAuth } from '../contexts/AuthContext';
+import { generateWebsiteSchema, generateOrganizationSchema } from '../utils/seo';
+import { Helmet } from 'react-helmet-async';
 
 export default function Home() {
   const [searchTerm, setSearchTerm] = useState('');
   const { user } = useAuth();
+  const websiteSchema = generateWebsiteSchema();
+  const organizationSchema = generateOrganizationSchema();
   
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -19,18 +23,34 @@ export default function Home() {
     <div className="min-h-screen flex flex-col items-center justify-center px-4 bg-gradient-to-b from-white to-gray-50">
       <SEO
         title="Home"
-        description="INFOiyo - Your premier platform for engaging discussions and insightful content. Join our community to share knowledge and explore ideas."
+        description="INFOiyo - The premier platform for engaging discussions and insightful content. Join our community to share knowledge and explore ideas."
         keywords="blog, articles, community, discussions, knowledge sharing"
       />
       
-      <h1 className="mb-12 flex items-center text-4xl sm:text-5xl font-bold">
-        <PenLine className="h-12 w-12 sm:h-16 sm:w-16" />
-        <span className="ml-4 bg-clip-text text-transparent bg-gradient-to-r from-black to-gray-600">INFOiyo</span>
+      <Helmet>
+        <script type="application/ld+json">
+          {JSON.stringify(websiteSchema)}
+        </script>
+        <script type="application/ld+json">
+          {JSON.stringify(organizationSchema)}
+        </script>
+      </Helmet>
+      
+      <h1 className="text-center mb-12">
+        <span className="flex items-center justify-center text-4xl sm:text-5xl font-bold">
+          <PenLine className="h-12 w-12 sm:h-16 sm:w-16" />
+          <span className="ml-4 bg-clip-text text-transparent bg-gradient-to-r from-black to-gray-600">INFOiyo</span>
+        </span>
+        <span className="sr-only">- The Premier Platform for Knowledge Sharing</span>
       </h1>
       
-      <h2 className="text-xl sm:text-2xl text-gray-600 mb-8 text-center">
-        Your Premier Platform for Knowledge Sharing
+      <h2 className="text-xl sm:text-2xl text-gray-600 mb-4 text-center max-w-2xl">
+        Discover, Share, and Engage with Quality Content
       </h2>
+      
+      <h3 className="text-lg text-gray-500 mb-8 text-center max-w-2xl">
+        Join our community of writers and readers to explore insightful articles and meaningful discussions
+      </h3>
 
       <form onSubmit={handleSearch} className="w-full max-w-2xl mb-8">
         <div className="relative">
