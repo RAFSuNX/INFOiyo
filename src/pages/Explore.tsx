@@ -26,6 +26,7 @@ export default function Explore() {
   const [searchTerm, setSearchTerm] = useState(initialQuery);
   const [posts, setPosts] = useState<Post[]>([]);
   const [filteredPosts, setFilteredPosts] = useState<Post[]>([]);
+  const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
 
   const fetchPosts = useCallback(async () => {
@@ -128,8 +129,10 @@ export default function Explore() {
               {post.imageUrl && (
                 <img
                   src={post.imageUrl}
+                  key={post.imageUrl}
                   alt={post.title}
-                  className="w-full h-48 object-cover rounded-lg mb-6 transform group-hover:scale-105 transition-transform duration-300"
+                  className={`w-full h-48 object-cover rounded-lg mb-6 transform group-hover:scale-105 transition-transform duration-300 ${imageErrors[post.id] ? 'hidden' : ''}`}
+                  onError={() => setImageErrors(prev => ({ ...prev, [post.id]: true }))}
                   loading="lazy"
                 />
               )}

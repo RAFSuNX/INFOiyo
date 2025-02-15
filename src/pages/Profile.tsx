@@ -25,6 +25,7 @@ export default function Profile() {
   const [posts, setPosts] = useState<UserPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [imageError, setImageError] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -142,17 +143,18 @@ export default function Profile() {
           <div className="relative group">
             {userProfile.photoURL ? (
               <img
+                key={userProfile.photoURL}
                 onError={(e) => {
                   const target = e.currentTarget;
-                  target.src = '';
-                  target.onerror = null;
-                  // Remove the invalid photo URL from the user's profile
-                  const userRef = doc(db, 'users', user.uid);
-                  updateDoc(userRef, { photoURL: null });
+                  setImageError(true);
+                  if (user) {
+                    const userRef = doc(db, 'users', user.uid);
+                    updateDoc(userRef, { photoURL: null });
+                  }
                 }}
                 src={userProfile.photoURL}
                 alt={userProfile.displayName}
-                className="h-20 w-20 rounded-full object-cover"
+                className={`h-20 w-20 rounded-full object-cover ${imageError ? 'hidden' : ''}`}
                 loading="lazy"
               />
             ) : (

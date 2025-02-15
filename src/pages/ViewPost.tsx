@@ -37,6 +37,7 @@ export default function ViewPost() {
   const location = useLocation();
   const navigate = useNavigate();
   const [postId, setPostId] = useState<string | null>(null);
+  const [imageError, setImageError] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const { user, userProfile } = useAuth();
 
@@ -331,8 +332,10 @@ export default function ViewPost() {
       {post.imageUrl && (
         <img
           src={post.imageUrl}
+          key={post.imageUrl}
           alt={post.title}
-          className="w-full h-48 sm:h-64 md:h-96 object-cover rounded-lg mb-6 sm:mb-8 shadow-lg hover:shadow-xl transition-shadow duration-300"
+          className={`w-full h-48 sm:h-64 md:h-96 object-cover rounded-lg mb-6 sm:mb-8 shadow-lg hover:shadow-xl transition-shadow duration-300 ${imageError ? 'hidden' : ''}`}
+          onError={() => setImageError(true)}
         />
       )}
 

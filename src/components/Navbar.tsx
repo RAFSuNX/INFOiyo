@@ -8,6 +8,7 @@ import { useState, useEffect } from 'react';
 export default function Navbar() {
   const { user, userProfile } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [imageError, setImageError] = useState(false);
 
   const canCreatePost = userProfile?.role === 'admin' || userProfile?.role === 'writer';
 
@@ -62,14 +63,14 @@ export default function Navbar() {
                 <Link to="/profile" className="flex items-center hover:text-gray-600 transition-colors duration-200">
                   {userProfile?.photoURL ? (
                     <img
+                      key={userProfile.photoURL}
                       src={userProfile.photoURL}
                       alt={user.displayName || ''}
-                      className="h-8 w-8 rounded-full object-cover"
+                      className={`h-8 w-8 rounded-full object-cover ${imageError ? 'hidden' : ''}`}
                       loading="lazy"
                       onError={(e) => {
                         const target = e.currentTarget;
-                        target.src = '';
-                        target.onerror = null;
+                        setImageError(true);
                         if (user) {
                           const userRef = doc(db, 'users', user.uid);
                           updateDoc(userRef, { photoURL: null });
@@ -138,9 +139,19 @@ export default function Navbar() {
               <div className="flex items-center space-x-4 mb-6">
                 {userProfile?.photoURL ? (
                   <img
+                    key={userProfile.photoURL}
                     src={userProfile.photoURL}
                     alt={user.displayName || ''}
-                    className="h-12 w-12 rounded-full object-cover"
+                    className={`h-12 w-12 rounded-full object-cover ${imageError ? 'hidden' : ''}`}
+                    loading="lazy"
+                    onError={(e) => {
+                      const target = e.currentTarget;
+                      setImageError(true);
+                      if (user) {
+                        const userRef = doc(db, 'users', user.uid);
+                        updateDoc(userRef, { photoURL: null });
+                      }
+                    }}
                   />
                 ) : (
                   <div className="h-12 w-12 rounded-full bg-black text-white flex items-center justify-center">
